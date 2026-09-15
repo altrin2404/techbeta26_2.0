@@ -1,0 +1,1375 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  UserPlus,
+  Trash2,
+  User,
+  Mail,
+  Phone,
+  GraduationCap,
+  Building2,
+  Sparkles,
+  ArrowRight,
+  ArrowLeft,
+  Copy,
+  Check,
+  CreditCard,
+  Info,
+  Layers,
+  Terminal,
+  PenTool,
+  Cpu,
+  Lightbulb,
+  Megaphone,
+  Search,
+  Download,
+  MessageCircle,
+  QrCode,
+  PartyPopper,
+  Star,
+  MapPin,
+  Clock,
+} from "lucide-react";
+
+export interface Participant {
+  name: string;
+  email: string;
+  phone: string;
+  department: string;
+  year: string;
+  college: string;
+  technicalEvents: string[];
+  nonTechnicalEvents: string[];
+}
+
+const TECHNICAL_EVENTS = [
+  { id: "GENBUILD", label: "GENBUILD", icon: Terminal, desc: "GenAI & AI tool prototyping", isTeam: false },
+  { id: "UI-VERSE", label: "UI-VERSE", icon: PenTool, desc: "Design & prototype interface", isTeam: false },
+  { id: "LOGIC TRAP", label: "LOGIC TRAP", icon: Cpu, desc: "Faulty statement & logic solve", isTeam: true },
+  { id: "IDEA FORGE", label: "IDEA FORGE", icon: Lightbulb, desc: "Innovative tech concept pitch", isTeam: true },
+];
+
+const NON_TECHNICAL_EVENTS = [
+  { id: "BRAND BLITZ", label: "BRAND BLITZ", icon: Megaphone, desc: "Creative advertising & pitch", isTeam: true },
+  { id: "BID & BUILD", label: "BID & BUILD", icon: Search, desc: "Auction & product creation pitch", isTeam: true },
+];
+
+const YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
+
+const DEPARTMENTS = [
+  "Information Technology",
+  "Computer Science and Engineering",
+  "Artificial Intelligence & Data Science",
+  "Electronics and Communication Engineering",
+  "Electrical and Electronics Engineering",
+  "Mechanical Engineering",
+  "Civil Engineering",
+  "Master of Computer Applications (MCA)",
+  "Other",
+];
+
+const createEmptyParticipant = (defaultCollege = ""): Participant => ({
+  name: "",
+  email: "",
+  phone: "",
+  department: "",
+  year: "",
+  college: defaultCollege,
+  technicalEvents: [],
+  nonTechnicalEvents: [],
+});
+
+export function Registration() {
+  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
+  const [teamName, setTeamName] = useState("");
+  const [members, setMembers] = useState<Participant[]>([createEmptyParticipant()]);
+  const [paymentUtr, setPaymentUtr] = useState("");
+  const [copiedUpi, setCopiedUpi] = useState(false);
+
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [regId, setRegId] = useState("");
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
+  const ticketRef = useRef<HTMLDivElement>(null);
+
+  const UPI_ID = "techbeta2k26@sbi";
+  const FEE_PER_PERSON = 200;
+  const totalAmount = members.length * FEE_PER_PERSON;
+
+  const [forceShowTeamName, setForceShowTeamName] = useState(false);
+  const isTeamCompetitionChosen = members.some((m) =>
+    m.technicalEvents.some((t) => t.toLowerCase().includes("logic trap") || t.toLowerCase().includes("idea forge") || t.toLowerCase().includes("team")) ||
+    m.nonTechnicalEvents.some((n) => n.toLowerCase().includes("brand blitz") || n.toLowerCase().includes("bid & build") || n.toLowerCase().includes("bid and build") || n.toLowerCase().includes("team"))
+  );
+  const showTeamName = members.length > 1 || isTeamCompetitionChosen || forceShowTeamName || Boolean(teamName);
+
+  const resetForm = () => {
+    setMembers([createEmptyParticipant()]);
+    setTeamName("");
+    setForceShowTeamName(false);
+    setPaymentUtr("");
+    setCurrentStep(1);
+    setStatus("idle");
+    setErrorMessage("");
+    setRegId("");
+    setQrDataUrl("");
+  };
+
+  useEffect(() => {
+    const handleOpen = () => {
+      if (status === "success") {
+        resetForm();
+      } else {
+        setCurrentStep(1);
+      }
+    };
+    window.addEventListener("open-registration", handleOpen);
+    return () => window.removeEventListener("open-registration", handleOpen);
+  }, [status]);
+
+  useEffect(() => {
+    if (status === "success" && members[0]) {
+      const qrData = `${regId}|${members[0].name}|${members[0].college}`;
+      import("qrcode")
+        .then((QRCode) => {
+          QRCode.toDataURL(qrData, {
+            width: 300,
+            margin: 1,
+            color: { dark: "#0f172a", light: "#ffffff" },
+          })
+            .then((url) => setQrDataUrl(url))
+            .catch(() => {
+              setQrDataUrl(
+                `https://api.qrserver.com/v1/create-qr-code/?size=140x140&color=0f172a&bgcolor=ffffff&qzone=2&data=${encodeURIComponent(qrData)}`
+              );
+            });
+        })
+        .catch(() => {
+          setQrDataUrl(
+            `https://api.qrserver.com/v1/create-qr-code/?size=140x140&color=0f172a&bgcolor=ffffff&qzone=2&data=${encodeURIComponent(qrData)}`
+          );
+        });
+    }
+  }, [status, regId, members]);
+
+  // Member field update
+  const updateMember = (index: number, field: keyof Participant, value: string | string[]) => {
+    setMembers((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  // Toggle Technical Event (Max 2)
+  const toggleTechEvent = (memberIndex: number, eventId: string) => {
+    setMembers((prev) => {
+      const updated = [...prev];
+      const member = { ...updated[memberIndex] };
+      const current = member.technicalEvents;
+
+      if (current.includes(eventId)) {
+        member.technicalEvents = current.filter((e) => e !== eventId);
+      } else {
+        if (current.length >= 2) {
+          setErrorMessage(`Participant ${memberIndex + 1} can select at most 2 technical events.`);
+          return prev;
+        }
+        member.technicalEvents = [...current, eventId];
+      }
+      setErrorMessage("");
+      updated[memberIndex] = member;
+      return updated;
+    });
+  };
+
+  // Toggle Non-Technical Event (Max 2)
+  const toggleNonTechEvent = (memberIndex: number, eventId: string) => {
+    setMembers((prev) => {
+      const updated = [...prev];
+      const member = { ...updated[memberIndex] };
+      const current = member.nonTechnicalEvents;
+
+      if (current.includes(eventId)) {
+        member.nonTechnicalEvents = current.filter((e) => e !== eventId);
+      } else {
+        if (current.length >= 2) {
+          setErrorMessage(`Participant ${memberIndex + 1} can select at most 2 non-technical events.`);
+          return prev;
+        }
+        member.nonTechnicalEvents = [...current, eventId];
+      }
+      setErrorMessage("");
+      updated[memberIndex] = member;
+      return updated;
+    });
+  };
+
+  // Add a team member
+  const handleAddMember = () => {
+    const defaultCollege = members[0]?.college || "";
+    setMembers((prev) => [...prev, createEmptyParticipant(defaultCollege)]);
+  };
+
+  // Remove a member (keep at least 1)
+  const handleRemoveMember = (index: number) => {
+    if (members.length <= 1) return;
+    setMembers((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Validate Step 1 before proceeding to Payment
+  const validateStep1 = () => {
+    for (let i = 0; i < members.length; i++) {
+      const m = members[i];
+      const memberLabel = `Member ${i + 1}`;
+
+      if (!m.name.trim()) {
+        setErrorMessage(`Please enter Full Name for ${memberLabel}.`);
+        return false;
+      }
+      if (!m.email.trim() || !m.email.includes("@")) {
+        setErrorMessage(`Please enter a valid Email for ${memberLabel}.`);
+        return false;
+      }
+      if (!m.phone.trim() || m.phone.length < 10) {
+        setErrorMessage(`Please enter a valid 10-digit Mobile Number for ${memberLabel}.`);
+        return false;
+      }
+      if (!m.department.trim()) {
+        setErrorMessage(`Please specify Department for ${memberLabel}.`);
+        return false;
+      }
+      if (!m.year.trim()) {
+        setErrorMessage(`Please select Year for ${memberLabel}.`);
+        return false;
+      }
+      if (!m.college.trim()) {
+        setErrorMessage(`Please enter College name for ${memberLabel}.`);
+        return false;
+      }
+      if (m.technicalEvents.length === 0 && m.nonTechnicalEvents.length === 0) {
+        setErrorMessage(`Please select at least 1 event for ${memberLabel}.`);
+        return false;
+      }
+      if (m.technicalEvents.length > 2) {
+        setErrorMessage(`${memberLabel} cannot register for more than 2 technical events.`);
+        return false;
+      }
+      if (m.nonTechnicalEvents.length > 2) {
+        setErrorMessage(`${memberLabel} cannot register for more than 2 non-technical events.`);
+        return false;
+      }
+    }
+    setErrorMessage("");
+    return true;
+  };
+
+  const handleProceedToPayment = () => {
+    if (validateStep1()) {
+      setCurrentStep(2);
+      window.scrollTo({ top: document.getElementById("register")?.offsetTop || 0, behavior: "smooth" });
+    }
+  };
+
+  const handleCopyUpi = () => {
+    navigator.clipboard.writeText(UPI_ID);
+    setCopiedUpi(true);
+    setTimeout(() => setCopiedUpi(false), 2000);
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!ticketRef.current || isDownloading) return;
+    setIsDownloading(true);
+    try {
+      // Primary: html-to-image (native SVG foreignObject, fully supports Tailwind v4 CSS)
+      const { toPng } = await import("html-to-image");
+
+      const dataUrl = await toPng(ticketRef.current, {
+        pixelRatio: 2.5,
+        backgroundColor: "#ffffff",
+        cacheBust: true,
+      });
+
+      const { jsPDF } = await import("jspdf");
+
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = (e) => reject(e);
+      });
+
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      const pdfWidth = 210; // A4 mm
+      const margin = 12;
+      const imgWidth = pdfWidth - margin * 2;
+      const imgHeight = (img.height * imgWidth) / img.width;
+
+      pdf.addImage(dataUrl, "PNG", margin, margin, imgWidth, imgHeight);
+      const firstName = members[0]?.name?.split(" ")[0] || "Pass";
+      pdf.save(`TechBETA-2026-2.0-EntryPass-${firstName}.pdf`);
+    } catch (primaryErr) {
+      console.warn("Primary PDF generation failed, attempting fallback:", primaryErr);
+      try {
+        const html2canvas = (await import("html2canvas")).default;
+        const canvas = await html2canvas(ticketRef.current, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          logging: false,
+        });
+        const imgData = canvas.toDataURL("image/png");
+        const { jsPDF } = await import("jspdf");
+        const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+        const imgWidth = 186;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        pdf.addImage(imgData, "PNG", 12, 12, imgWidth, imgHeight);
+        const firstName = members[0]?.name?.split(" ")[0] || "Pass";
+        pdf.save(`TechBETA-2026-2.0-EntryPass-${firstName}.pdf`);
+      } catch (fallbackErr) {
+        console.error("Canvas PDF methods failed, opening print/save dialog:", fallbackErr);
+        window.print();
+      }
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage("");
+
+    if (!paymentUtr.trim()) {
+      setErrorMessage("Please enter your UPI Transaction Reference ID / UTR number.");
+      return;
+    }
+
+    setStatus("loading");
+
+    try {
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          teamName: teamName.trim() || undefined,
+          members,
+          paymentUtr: paymentUtr.trim(),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Registration failed. Please try again.");
+      }
+
+      setRegId(data.id || data.teamId || "TB26-CONFIRMED");
+      setStatus("success");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An unexpected error occurred.";
+      setErrorMessage(message);
+      setStatus("error");
+    }
+  };
+
+  return (
+    <section id="register" className="w-full py-16 md:py-24 bg-slate-50 relative overflow-hidden scroll-mt-20 md:scroll-mt-24">
+      {/* Decorative background glows */}
+      <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3 transform pointer-events-none">
+        <div className="h-[350px] w-[350px] rounded-full bg-gradient-to-br from-blue-400/15 to-purple-400/15 blur-3xl"></div>
+      </div>
+      <div className="absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/3 transform pointer-events-none">
+        <div className="h-[350px] w-[350px] rounded-full bg-gradient-to-tr from-cyan-400/15 to-blue-400/15 blur-3xl"></div>
+      </div>
+
+      <div className="container mx-auto px-4 max-w-4xl relative z-10">
+        {/* Section Header */}
+        <div className="text-center mb-8 md:mb-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100/80 text-blue-700 text-xs font-semibold uppercase tracking-wider mb-3">
+            <Sparkles className="h-3.5 w-3.5" />
+            Registration Portal
+          </div>
+          <h2
+            className="text-3xl md:text-5xl font-bold text-slate-900 mb-3 tracking-tight"
+            style={{ fontFamily: "var(--font-orbitron)" }}
+          >
+            Team Details
+          </h2>
+          <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto">
+            Register your team or solo entry for TECHBETA 2026 2.0. ₹200 per participant (includes lunch, event entry & certificates).
+          </p>
+        </div>
+
+        {/* Step Progress Bar */}
+        {status !== "success" && (
+          <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 mb-6 sm:mb-8">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="font-orbitron font-bold text-blue-600 text-sm sm:text-base" style={{ fontFamily: "var(--font-orbitron)" }}>
+                  Step {currentStep}/2
+                </span>
+                <span className="text-slate-400">•</span>
+                <span className="font-semibold text-slate-800 text-xs sm:text-sm">
+                  {currentStep === 1 ? "Step 1: Participant Details" : "Step 2: Payment & Review"}
+                </span>
+              </div>
+              <div className="text-xs text-slate-500 font-medium">
+                {members.length} {members.length === 1 ? "Participant" : "Participants"} (₹{totalAmount})
+              </div>
+            </div>
+
+            {/* Visual stepper indicator bar */}
+            <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+              <motion.div
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 h-full rounded-full"
+                initial={{ width: "50%" }}
+                animate={{ width: currentStep === 1 ? "50%" : "100%" }}
+                transition={{ duration: 0.3 }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Main Card Container */}
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-10 shadow-xl shadow-slate-200/60 border border-slate-200/80">
+          <AnimatePresence mode="wait">
+            {/* SUCCESS VIEW */}
+            {status === "success" ? (
+              <motion.div
+                key="success-screen"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="flex flex-col items-center w-full"
+              >
+                {/* Animated confetti header */}
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
+                  className="relative flex items-center justify-center mb-5"
+                >
+                  <div className="h-24 w-24 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-2xl shadow-emerald-500/30">
+                    <PartyPopper className="h-11 w-11 text-white" />
+                  </div>
+                  <motion.div
+                    className="absolute -top-1 -right-1 h-8 w-8 rounded-full bg-yellow-400 flex items-center justify-center shadow-lg"
+                    animate={{ rotate: [0, 15, -15, 0] }}
+                    transition={{ repeat: Infinity, duration: 2, delay: 0.5 }}
+                  >
+                    <Star className="h-4 w-4 text-yellow-900 fill-yellow-900" />
+                  </motion.div>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-center mb-8"
+                >
+                  <h3
+                    className="text-2xl sm:text-3xl font-black text-slate-900 mb-2"
+                    style={{ fontFamily: "var(--font-orbitron)" }}
+                  >
+                    You&apos;re Registered!
+                  </h3>
+                  <p className="text-slate-500 text-sm sm:text-base max-w-md">
+                    A confirmation email with your Entry Pass has been sent to{" "}
+                    <span className="font-semibold text-blue-600">{members[0]?.email}</span>.
+                    Check your inbox!
+                  </p>
+                </motion.div>
+
+                {/* ── SUPER COOL ENTRY PASS TICKET ── */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="w-full max-w-lg mb-6"
+                >
+                  {/* Ticket */}
+                  <div ref={ticketRef} id="print-ticket" className="relative rounded-3xl overflow-hidden shadow-2xl shadow-slate-900/25 border border-slate-200">
+                    {/* Ticket header */}
+                    <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 px-6 pt-6 pb-5 relative overflow-hidden">
+                      {/* decorative circles */}
+                      <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-500/10 rounded-full blur-2xl" />
+                      <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl" />
+
+                      <div className="flex items-start justify-between relative z-10">
+                        <div>
+                          <p className="text-[10px] text-sky-400 font-extrabold uppercase tracking-[0.25em] mb-1">
+                            Official Entry Pass
+                          </p>
+                          <p
+                            className="text-xl sm:text-2xl font-black text-white tracking-widest"
+                            style={{ fontFamily: "var(--font-orbitron)" }}
+                          >
+                            TechBETA <span className="text-sky-400">2026 2.0</span>
+                          </p>
+                          <p className="text-xs text-slate-300 mt-1 font-medium">
+                            Conference Hall &bull; St. Xavier&apos;s Catholic College of Engineering, Nagercoil
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-1.5 shrink-0 ml-3">
+                          <span className="px-3 py-1 bg-emerald-500/25 border border-emerald-400/50 text-emerald-300 text-[10px] font-bold rounded-full uppercase tracking-wider">
+                            ✓ Confirmed
+                          </span>
+                          <span className="text-xs font-semibold text-sky-200">Oct 13, 2026 &bull; 9:00 AM</span>
+                        </div>
+                      </div>
+
+                      {/* decorative dots row */}
+                      <div className="flex gap-1 mt-4 relative z-10">
+                        {Array.from({ length: 28 }).map((_, i) => (
+                          <div key={i} className="flex-1 h-0.5 rounded-full bg-slate-700" />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Ticket punch holes */}
+                    <div className="relative bg-white">
+                      <div className="absolute -top-3.5 left-6 w-7 h-7 rounded-full bg-slate-100 border border-slate-200" />
+                      <div className="absolute -top-3.5 right-6 w-7 h-7 rounded-full bg-slate-100 border border-slate-200" />
+
+                      {/* Ticket body: QR + Details */}
+                      <div className="p-5 sm:p-6 pt-7">
+                        <div className="flex flex-col sm:flex-row gap-5 items-start">
+                          {/* QR Code */}
+                          <div className="flex-shrink-0 flex flex-col items-center mx-auto sm:mx-0">
+                            <div className="p-2.5 bg-white rounded-2xl border-2 border-slate-900 shadow-md">
+                              <img
+                                src={
+                                  qrDataUrl ||
+                                  `https://api.qrserver.com/v1/create-qr-code/?size=140x140&color=0f172a&bgcolor=ffffff&qzone=2&data=${encodeURIComponent(
+                                    regId + "|" + members[0]?.name + "|" + members[0]?.college
+                                  )}`
+                                }
+                                width={120}
+                                height={120}
+                                alt="Entry Gate QR Code"
+                                className="block rounded-sm"
+                                crossOrigin="anonymous"
+                              />
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-2.5">
+                              <QrCode className="h-3.5 w-3.5 text-slate-700" />
+                              <span className="text-[10px] text-slate-800 uppercase tracking-wider font-extrabold">Scan at Gate</span>
+                            </div>
+                          </div>
+
+                          {/* Participant info */}
+                          <div className="flex-grow min-w-0 w-full space-y-4">
+                            {teamName && (
+                              <div className="px-3.5 py-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-950 text-xs font-bold flex items-center justify-between">
+                                <span className="uppercase tracking-wider text-[10px] text-blue-700">Team Name:</span>
+                                <span className="font-extrabold text-sm text-blue-900">{teamName}</span>
+                              </div>
+                            )}
+                            {members.map((m, idx) => (
+                              <div
+                                key={idx}
+                                className={idx > 0 ? "pt-4 border-t-2 border-dashed border-slate-200" : ""}
+                              >
+                                {members.length > 1 && (
+                                  <div className="inline-block px-2 py-0.5 rounded-md bg-slate-800 text-white text-[10px] font-bold uppercase tracking-wider mb-2">
+                                    Participant {idx + 1}
+                                  </div>
+                                )}
+
+                                {/* Name */}
+                                <div className="mb-2">
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block">
+                                    Name
+                                  </span>
+                                  <p className="text-lg sm:text-xl font-black text-slate-950 leading-tight">
+                                    {m.name}
+                                  </p>
+                                </div>
+
+                                {/* College Name */}
+                                <div className="mb-2.5">
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block">
+                                    College Name
+                                  </span>
+                                  <p className="text-xs sm:text-sm font-bold text-slate-800 leading-snug">
+                                    {m.college || "St. Xavier's Catholic College of Engineering, Nagercoil"}
+                                  </p>
+                                </div>
+
+                                {/* Technical Events */}
+                                <div className="mb-2.5">
+                                  <span className="text-[11px] font-extrabold uppercase tracking-wide text-blue-950 block mb-1">
+                                    Technical Events:
+                                  </span>
+                                  {m.technicalEvents.length > 0 ? (
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {m.technicalEvents.map((ev) => (
+                                        <span
+                                          key={ev}
+                                          className="px-2.5 py-1 bg-blue-100 text-blue-950 text-xs font-bold rounded-lg border border-blue-300 shadow-xs"
+                                        >
+                                          {ev}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs font-medium text-slate-500 italic">None selected</p>
+                                  )}
+                                </div>
+
+                                {/* Non-Technical Events */}
+                                <div>
+                                  <span className="text-[11px] font-extrabold uppercase tracking-wide text-purple-950 block mb-1">
+                                    Non-Technical Events:
+                                  </span>
+                                  {m.nonTechnicalEvents.length > 0 ? (
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {m.nonTechnicalEvents.map((ev) => (
+                                        <span
+                                          key={ev}
+                                          className="px-2.5 py-1 bg-purple-100 text-purple-950 text-xs font-bold rounded-lg border border-purple-300 shadow-xs"
+                                        >
+                                          {ev}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs font-medium text-slate-500 italic">None selected</p>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Venue & Time highlight strip inside the ticket */}
+                        <div className="mt-5 pt-4 border-t-2 border-slate-200 bg-slate-50/90 -mx-5 -mb-5 sm:-mx-6 sm:-mb-6 px-5 py-4 rounded-b-2xl">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-slate-900">
+                            <div className="flex items-start gap-2.5">
+                              <MapPin className="h-4 w-4 text-teal-600 shrink-0 mt-0.5" />
+                              <div>
+                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block">
+                                  Venue
+                                </span>
+                                <span className="font-extrabold text-slate-950 text-xs sm:text-sm block">
+                                  Conference Hall
+                                </span>
+                                <span className="text-xs font-bold text-slate-800 block">
+                                  St. Xavier&apos;s Catholic College of Engineering, Nagercoil
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-2.5 sm:justify-end">
+                              <Clock className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                              <div>
+                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block">
+                                  Reporting Time &amp; Date
+                                </span>
+                                <span className="font-extrabold text-slate-950 text-xs sm:text-sm block">
+                                  9:00 AM Onwards
+                                </span>
+                                <span className="text-xs font-bold text-slate-800 block">
+                                  October 13, 2026
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Perforated bottom edge */}
+                      <div className="flex gap-1 mx-5 mb-0">
+                        {Array.from({ length: 28 }).map((_, i) => (
+                          <div key={i} className="flex-1 h-px rounded-full bg-slate-300" />
+                        ))}
+                      </div>
+
+                      {/* Ticket footer strip */}
+                      <div className="flex items-center justify-between px-5 sm:px-6 py-3.5 bg-slate-100/80 border-t border-slate-200">
+                        <div className="text-xs text-slate-800 font-bold flex items-center gap-1.5">
+                          <span>🍽 Lunch</span>
+                          <span>&bull;</span>
+                          <span>📜 Certificate</span>
+                          <span>&bull;</span>
+                          <span>🎟 Entry</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-lg font-black text-slate-950">₹{totalAmount}</span>
+                          <span className="text-xs font-bold text-emerald-700 ml-1.5 uppercase">PAID</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* ── ACTION BUTTONS ── */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.45 }}
+                  className="flex flex-col sm:flex-row gap-3 w-full max-w-lg mb-6"
+                >
+                  <button
+                    type="button"
+                    onClick={handleDownloadPDF}
+                    disabled={isDownloading}
+                    className="flex-1 inline-flex items-center justify-center gap-2 h-12 px-5 rounded-2xl bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:scale-100"
+                  >
+                    {isDownloading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                    {isDownloading ? "Generating PDF..." : "Download E-Pass PDF"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="flex-1 inline-flex items-center justify-center gap-2 h-12 px-5 rounded-2xl border border-slate-300 bg-white text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-all shadow-sm"
+                  >
+                    Register Another Team
+                  </button>
+                </motion.div>
+
+                {/* ── WHATSAPP JOIN CARD ── */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.55 }}
+                  className="w-full max-w-lg"
+                >
+                  <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#075e54] to-[#128c7e] p-5 sm:p-6 text-white shadow-xl shadow-green-900/20">
+                    {/* Background blobs */}
+                    <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
+                    <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-white/5 rounded-full blur-xl" />
+
+                    <div className="relative z-10">
+                      <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0 p-3 bg-white/10 rounded-2xl">
+                          <MessageCircle className="h-8 w-8 text-white fill-white/20" />
+                        </div>
+                        <div className="flex-grow">
+                          <p className="font-black text-base sm:text-lg leading-tight">
+                            Join the Official TechBETA WhatsApp Group
+                          </p>
+                          <p className="text-white/75 text-xs sm:text-sm mt-1.5 leading-relaxed">
+                            Get live updates — event rooms, schedules, spot registrations, food coupons &amp; last-minute announcements!
+                          </p>
+                        </div>
+                      </div>
+
+                      <a
+                        href="https://chat.whatsapp.com/DUMMY_LINK_REPLACE_ME"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-4 flex items-center justify-center gap-2.5 w-full h-12 rounded-xl bg-white text-[#075e54] font-bold text-sm hover:bg-green-50 transition-all shadow-md"
+                      >
+                        <svg viewBox="0 0 24 24" className="h-5 w-5 fill-[#25d366]" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347" />
+                        </svg>
+                        Join TechBETA WhatsApp Group
+                        <ArrowRight className="h-4 w-4" />
+                      </a>
+
+                      <p className="text-center text-[11px] text-white/50 mt-3">
+                        ⚠️ Don&apos;t miss it — critical event-day announcements are here only!
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Important note */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.7 }}
+                  className="flex items-start gap-2.5 bg-blue-50 border border-blue-200 text-blue-800 text-xs sm:text-sm p-4 rounded-xl w-full max-w-lg mt-6"
+                >
+                  <Info className="h-4 w-4 shrink-0 text-blue-600 mt-0.5" />
+                  <div>
+                    <span className="font-semibold">At the venue:</span> Show the downloaded E-Pass PDF or this screen&apos;s QR code at the Registration Desk at 9:00 AM on October 13, 2026 at Conference Hall, St. Xavier&apos;s Catholic College of Engineering, Nagercoil.
+                  </div>
+                </motion.div>
+              </motion.div>
+            ) : currentStep === 1 ? (
+              /* STEP 1: PARTICIPANT DETAILS */
+              <motion.div
+                key="step1-form"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                className="space-y-8"
+              >
+                {/* Error Banner */}
+                {errorMessage && (
+                  <div className="bg-red-50 text-red-600 p-4 rounded-xl flex items-start gap-3 border border-red-200 text-sm">
+                    <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                    <p className="font-medium">{errorMessage}</p>
+                  </div>
+                )}
+
+                {/* Team Name (Prompted if team competition is chosen or multi-member team) */}
+                {showTeamName ? (
+                  <div className="p-4 sm:p-5 bg-gradient-to-r from-blue-50/90 to-indigo-50/70 rounded-2xl border-2 border-blue-200/90 shadow-xs mb-6 transition-all animate-fadeIn">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
+                      <label htmlFor="teamName" className="block text-xs font-black text-blue-950 uppercase tracking-wider">
+                        Team Name {isTeamCompetitionChosen || members.length > 1 ? "(Team Competition)" : "(Optional)"}
+                      </label>
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 w-fit">
+                        {isTeamCompetitionChosen ? "Team Competition Chosen" : "Multi-Member Team"}
+                      </span>
+                    </div>
+                    <input
+                      id="teamName"
+                      type="text"
+                      value={teamName}
+                      onChange={(e) => setTeamName(e.target.value)}
+                      placeholder="e.g. Code Knights, Byte Busters, Innovators..."
+                      className="w-full h-11 px-4 rounded-xl border border-blue-300 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-medium shadow-xs"
+                    />
+                    <p className="text-[11px] text-slate-600 mt-1.5">
+                      This team name will appear on official judging rosters, attendance sheets, and certificates.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex justify-end mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setForceShowTeamName(true)}
+                      className="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1 transition-all"
+                    >
+                      <span>+ Register with a Team Name</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Members List */}
+                <div className="space-y-8">
+                  {members.map((member, mIdx) => (
+                    <div
+                      key={mIdx}
+                      className="relative bg-slate-50/70 rounded-2xl p-5 sm:p-7 border border-slate-200 transition-all hover:border-slate-300"
+                    >
+                      {/* Member Header */}
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-8 w-8 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-sm shadow-sm">
+                            {mIdx + 1}
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-bold text-slate-900">
+                              Member {mIdx + 1}
+                            </h3>
+                            <p className="text-xs text-slate-500">
+                              {mIdx === 0 ? "Team Lead / Primary Participant" : `Participant ${mIdx + 1}`}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Remove button for member 2+ */}
+                        {members.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveMember(mIdx)}
+                            className="inline-flex items-center gap-1 text-xs font-medium text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Remove
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Participant Fields Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 mb-6">
+                        {/* Full Name */}
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5 text-slate-500" />
+                            Full Name <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            id={mIdx === 0 ? "first-participant-name" : undefined}
+                            type="text"
+                            required
+                            value={member.name}
+                            onChange={(e) => updateMember(mIdx, "name", e.target.value)}
+                            placeholder="e.g. Altrin Benser"
+                            className="w-full h-11 px-3.5 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-500 placeholder:opacity-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm transition-all focus:ring-offset-1"
+                          />
+                        </div>
+
+                        {/* Email */}
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                            <Mail className="h-3.5 w-3.5 text-slate-500" />
+                            Email <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="email"
+                            required
+                            value={member.email}
+                            onChange={(e) => updateMember(mIdx, "email", e.target.value)}
+                            placeholder="e.g. altrin@example.com"
+                            className="w-full h-11 px-3.5 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-500 placeholder:opacity-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+                          />
+                        </div>
+
+                        {/* Mobile */}
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                            <Phone className="h-3.5 w-3.5 text-slate-500" />
+                            Mobile <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="tel"
+                            required
+                            value={member.phone}
+                            onChange={(e) => updateMember(mIdx, "phone", e.target.value.replace(/[^0-9]/g, "").slice(0, 10))}
+                            placeholder="e.g. 9876543210"
+                            maxLength={10}
+                            className="w-full h-11 px-3.5 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-500 placeholder:opacity-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+                          />
+                        </div>
+
+                        {/* Department */}
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                            <Layers className="h-3.5 w-3.5 text-slate-500" />
+                            Department <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            list={`dept-list-${mIdx}`}
+                            value={member.department}
+                            onChange={(e) => updateMember(mIdx, "department", e.target.value)}
+                            placeholder="e.g. Information Technology"
+                            className="w-full h-11 px-3.5 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-500 placeholder:opacity-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+                          />
+                          <datalist id={`dept-list-${mIdx}`}>
+                            {DEPARTMENTS.map((dept) => (
+                              <option key={dept} value={dept} />
+                            ))}
+                          </datalist>
+                        </div>
+
+                        {/* Select Year */}
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                            <GraduationCap className="h-3.5 w-3.5 text-slate-500" />
+                            Select Year <span className="text-red-500">*</span>
+                          </label>
+                          <select
+                            required
+                            value={member.year}
+                            onChange={(e) => updateMember(mIdx, "year", e.target.value)}
+                            className="w-full h-11 px-3.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm text-slate-900 font-medium"
+                          >
+                            <option value="">Select Year</option>
+                            {YEARS.map((yr) => (
+                              <option key={yr} value={yr}>
+                                {yr}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* College */}
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                            <Building2 className="h-3.5 w-3.5 text-slate-500" />
+                            College <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={member.college}
+                            onChange={(e) => updateMember(mIdx, "college", e.target.value)}
+                            placeholder="e.g. St. Xavier's Catholic College of Engineering"
+                            className="w-full h-11 px-3.5 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-500 placeholder:opacity-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Important Notice Banner */}
+                      <div className="mb-6 rounded-xl bg-amber-50 border border-amber-200/90 p-3.5 text-amber-900 text-xs sm:text-sm flex items-start gap-2.5">
+                        <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                        <p className="font-medium">
+                          <strong>Important:</strong> Each participant can register for a maximum of any 2 technical events and 2 non technical events.
+                        </p>
+                      </div>
+
+                      {/* Event Selection Sections */}
+                      <div className="space-y-5">
+                        {/* Technical Events */}
+                        <div>
+                          <div className="flex items-center justify-between mb-2.5">
+                            <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                              <span>Technical Events</span>
+                              <span className="text-[11px] font-semibold px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
+                                {member.technicalEvents.length}/2 Selected
+                              </span>
+                            </h4>
+                            <span className="text-xs text-slate-400 font-medium">Max 2</span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            {TECHNICAL_EVENTS.map((evt) => {
+                              const isSelected = member.technicalEvents.includes(evt.id);
+                              const isDisabled = !isSelected && member.technicalEvents.length >= 2;
+                              const Icon = evt.icon;
+
+                              return (
+                                <button
+                                  type="button"
+                                  key={evt.id}
+                                  disabled={isDisabled}
+                                  onClick={() => toggleTechEvent(mIdx, evt.id)}
+                                  className={`p-3 rounded-xl border text-left flex items-start gap-3 transition-all ${isSelected
+                                      ? "bg-blue-50/80 border-blue-500 text-blue-900 shadow-sm ring-1 ring-blue-500"
+                                      : isDisabled
+                                        ? "bg-slate-100/60 border-slate-200 text-slate-400 opacity-60 cursor-not-allowed"
+                                        : "bg-white border-slate-200 hover:border-blue-300 text-slate-700 hover:bg-slate-50/80"
+                                    }`}
+                                >
+                                  <div
+                                    className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${isSelected
+                                        ? "bg-blue-600 text-white"
+                                        : "bg-slate-100 text-slate-600"
+                                      }`}
+                                  >
+                                    <Icon className="h-4 w-4" />
+                                  </div>
+                                  <div className="flex-grow min-w-0">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-1.5 min-w-0">
+                                        <p className="font-semibold text-xs sm:text-sm truncate">{evt.label}</p>
+                                        {evt.isTeam && (
+                                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 shrink-0">
+                                            Team (1-2)
+                                          </span>
+                                        )}
+                                      </div>
+                                      {isSelected && <Check className="h-4 w-4 text-blue-600 shrink-0" />}
+                                    </div>
+                                    <p className="text-[11px] text-slate-500 truncate">{evt.desc}</p>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Non Technical Events */}
+                        <div>
+                          <div className="flex items-center justify-between mb-2.5">
+                            <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                              <span>Non Technical Events</span>
+                              <span className="text-[11px] font-semibold px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">
+                                {member.nonTechnicalEvents.length}/2 Selected
+                              </span>
+                            </h4>
+                            <span className="text-xs text-slate-400 font-medium">Max 2</span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            {NON_TECHNICAL_EVENTS.map((evt) => {
+                              const isSelected = member.nonTechnicalEvents.includes(evt.id);
+                              const isDisabled = !isSelected && member.nonTechnicalEvents.length >= 2;
+                              const Icon = evt.icon;
+
+                              return (
+                                <button
+                                  type="button"
+                                  key={evt.id}
+                                  disabled={isDisabled}
+                                  onClick={() => toggleNonTechEvent(mIdx, evt.id)}
+                                  className={`p-3 rounded-xl border text-left flex items-start gap-3 transition-all ${isSelected
+                                      ? "bg-purple-50/80 border-purple-500 text-purple-900 shadow-sm ring-1 ring-purple-500"
+                                      : isDisabled
+                                        ? "bg-slate-100/60 border-slate-200 text-slate-400 opacity-60 cursor-not-allowed"
+                                        : "bg-white border-slate-200 hover:border-purple-300 text-slate-700 hover:bg-slate-50/80"
+                                    }`}
+                                >
+                                  <div
+                                    className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${isSelected
+                                        ? "bg-purple-600 text-white"
+                                        : "bg-slate-100 text-slate-600"
+                                      }`}
+                                  >
+                                    <Icon className="h-4 w-4" />
+                                  </div>
+                                  <div className="flex-grow min-w-0">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-1.5 min-w-0">
+                                        <p className="font-semibold text-xs sm:text-sm truncate">{evt.label}</p>
+                                        {evt.isTeam && (
+                                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 shrink-0">
+                                            Team (1-2)
+                                          </span>
+                                        )}
+                                      </div>
+                                      {isSelected && <Check className="h-4 w-4 text-purple-600 shrink-0" />}
+                                    </div>
+                                    <p className="text-[11px] text-slate-500 truncate">{evt.desc}</p>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Bottom Action Bar: Add Team Member & Proceed to Payment */}
+                <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <button
+                    type="button"
+                    onClick={handleAddMember}
+                    className="w-full sm:w-auto px-5 py-3 rounded-xl border-2 border-dashed border-blue-400 bg-blue-50/50 hover:bg-blue-50 text-blue-700 font-semibold text-sm flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    Add Team Member
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleProceedToPayment}
+                    className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-slate-900 text-white font-semibold text-sm sm:text-base hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-900/20 hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    <span>Proceed to Payment</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </motion.div>
+            ) : (
+              /* STEP 2: PAYMENT & REVIEW (STEP 2/2) */
+              <motion.form
+                key="step2-payment"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                onSubmit={handleSubmit}
+                className="space-y-6 sm:space-y-8"
+              >
+                {/* Error Banner */}
+                {errorMessage && (
+                  <div className="bg-red-50 text-red-600 p-4 rounded-xl flex items-start gap-3 border border-red-200 text-sm">
+                    <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                    <p className="font-medium">{errorMessage}</p>
+                  </div>
+                )}
+
+                {/* Order & Participant Summary */}
+                <div className="bg-slate-50 rounded-2xl p-5 sm:p-6 border border-slate-200/90">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
+                    <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                      <CreditCard className="h-4 w-4 text-blue-600" />
+                      Registration Summary
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(1)}
+                      className="text-xs text-blue-600 hover:text-blue-700 font-semibold hover:underline"
+                    >
+                      Edit Details
+                    </button>
+                  </div>
+
+                  <div className="space-y-3 mb-4">
+                    {teamName && (
+                      <div className="p-3 bg-blue-50/80 rounded-xl border border-blue-200 flex items-center justify-between text-xs font-bold text-blue-950">
+                        <span className="uppercase tracking-wider text-[10px] text-blue-700">Team Name:</span>
+                        <span className="font-extrabold text-sm text-blue-900">{teamName}</span>
+                      </div>
+                    )}
+                    {members.map((m, idx) => (
+                      <div key={idx} className="bg-white p-3.5 rounded-xl border border-slate-200 text-xs sm:text-sm">
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="font-bold text-slate-900">
+                            Member {idx + 1}: {m.name}
+                          </span>
+                          <span className="font-semibold text-slate-700">₹{FEE_PER_PERSON}</span>
+                        </div>
+                        <p className="text-slate-500 text-xs mb-1.5">
+                          {m.department} • {m.year} • {m.college}
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {m.technicalEvents.map((t) => (
+                            <span key={t} className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[11px] font-medium border border-blue-200">
+                              {t}
+                            </span>
+                          ))}
+                          {m.nonTechnicalEvents.map((nt) => (
+                            <span key={nt} className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 text-[11px] font-medium border border-purple-200">
+                              {nt}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Fee Total breakdown */}
+                  <div className="pt-3 border-t border-slate-200 flex justify-between items-center">
+                    <div>
+                      <p className="text-xs text-slate-500">Total Payable ({members.length} participant{members.length > 1 ? "s" : ""})</p>
+                      <p className="text-xs text-emerald-600 font-medium">Includes Buffet Lunch & Certificate</p>
+                    </div>
+                    <div className="text-2xl font-black text-slate-900">
+                      ₹{totalAmount}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Official UPI QR & Payment Options */}
+                <div className="bg-gradient-to-br from-blue-50/50 via-white to-indigo-50/40 rounded-2xl p-5 sm:p-7 border border-blue-200/80">
+                  <div className="text-center mb-6">
+                    <h4 className="text-base sm:text-lg font-bold text-slate-900 mb-1">
+                      Scan & Pay via any UPI App
+                    </h4>
+                    <p className="text-xs sm:text-sm text-slate-500">
+                      Google Pay • PhonePe • Paytm • BHIM • Any Bank UPI
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col md:flex-row items-center justify-center gap-6 sm:gap-8 mb-6">
+                    {/* Visual QR Code Display */}
+                    <div className="relative p-3 bg-white rounded-2xl shadow-md border border-slate-200 flex flex-col items-center">
+                      <div className="w-44 h-44 bg-slate-900 rounded-xl p-2 flex items-center justify-center relative overflow-hidden">
+                        {/* Realistic High-contrast Stylized QR SVG representation */}
+                        <svg className="w-full h-full text-white" viewBox="0 0 100 100" fill="currentColor">
+                          {/* Corner Squares */}
+                          <rect x="5" y="5" width="28" height="28" fill="white" rx="3" />
+                          <rect x="9" y="9" width="20" height="20" fill="#0f172a" rx="2" />
+                          <rect x="13" y="13" width="12" height="12" fill="white" rx="1" />
+
+                          <rect x="67" y="5" width="28" height="28" fill="white" rx="3" />
+                          <rect x="71" y="9" width="20" height="20" fill="#0f172a" rx="2" />
+                          <rect x="75" y="13" width="12" height="12" fill="white" rx="1" />
+
+                          <rect x="5" y="67" width="28" height="28" fill="white" rx="3" />
+                          <rect x="9" y="71" width="20" height="20" fill="#0f172a" rx="2" />
+                          <rect x="13" y="75" width="12" height="12" fill="white" rx="1" />
+
+                          {/* Pattern Blocks */}
+                          <rect x="38" y="8" width="6" height="6" fill="white" />
+                          <rect x="48" y="8" width="6" height="6" fill="white" />
+                          <rect x="58" y="14" width="6" height="6" fill="white" />
+                          <rect x="38" y="24" width="12" height="6" fill="white" />
+                          <rect x="54" y="24" width="6" height="12" fill="white" />
+
+                          <rect x="8" y="38" width="6" height="12" fill="white" />
+                          <rect x="18" y="44" width="12" height="6" fill="white" />
+                          <rect x="24" y="54" width="6" height="8" fill="white" />
+
+                          <rect x="38" y="38" width="24" height="24" fill="#3b82f6" rx="4" />
+                          <text x="50" y="54" fill="white" fontSize="10" fontWeight="bold" textAnchor="middle">TB26</text>
+
+                          <rect x="68" y="38" width="8" height="14" fill="white" />
+                          <rect x="80" y="44" width="12" height="8" fill="white" />
+                          <rect x="72" y="58" width="18" height="6" fill="white" />
+
+                          <rect x="38" y="68" width="8" height="18" fill="white" />
+                          <rect x="50" y="74" width="16" height="6" fill="white" />
+                          <rect x="70" y="70" width="8" height="8" fill="white" />
+                          <rect x="82" y="78" width="12" height="14" fill="white" />
+                          <rect x="42" y="88" width="18" height="6" fill="white" />
+                        </svg>
+                      </div>
+                      <div className="mt-2 text-center">
+                        <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
+                          ₹{totalAmount}
+                        </span>
+                        <span className="text-[10px] text-slate-400">TechBETA 2026 2.0</span>
+                      </div>
+                    </div>
+
+                    {/* UPI Copy & Details */}
+                    <div className="flex-grow space-y-3 text-center md:text-left">
+                      <div>
+                        <p className="text-xs text-slate-500 font-medium">Official UPI ID</p>
+                        <div className="inline-flex items-center gap-2 mt-1 bg-white border border-slate-200 px-3.5 py-2 rounded-xl shadow-sm">
+                          <span className="font-mono text-xs sm:text-sm font-bold text-slate-900">{UPI_ID}</span>
+                          <button
+                            type="button"
+                            onClick={handleCopyUpi}
+                            className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors"
+                            title="Copy UPI ID"
+                          >
+                            {copiedUpi ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-slate-600 space-y-1">
+                        <p>1. Open your UPI App (GPay, PhonePe, Paytm, etc.).</p>
+                        <p>2. Scan the QR code or pay to <strong>{UPI_ID}</strong>.</p>
+                        <p>3. Pay exact amount: <strong className="text-slate-900">₹{totalAmount}</strong>.</p>
+                        <p>4. Enter the 12-digit <strong>UTR / Transaction Reference Number</strong> below.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Transaction ID / UTR Input */}
+                  <div className="pt-4 border-t border-blue-200/60">
+                    <label htmlFor="utr" className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
+                      UPI Transaction ID / UTR Number <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="utr"
+                      type="text"
+                      required
+                      value={paymentUtr}
+                      onChange={(e) => setPaymentUtr(e.target.value)}
+                      placeholder="e.g. 427819873421 or T260911001"
+                      className="w-full h-12 px-4 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-500 placeholder:opacity-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm font-mono font-medium"
+                    />
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      You can find the 12-digit UTR in your payment app receipt under &apos;UPI Ref ID&apos; or &apos;UTR&apos;.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Step 2 Bottom Navigation */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(1)}
+                    disabled={status === "loading"}
+                    className="w-full sm:w-auto px-5 py-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm flex items-center justify-center gap-2 transition-all"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Participant Details
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={status === "loading"}
+                    className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-slate-900 text-white font-semibold text-sm sm:text-base hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-900/20 disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {status === "loading" && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Confirm & Complete Registration
+                  </button>
+                </div>
+              </motion.form>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </section>
+  );
+}
