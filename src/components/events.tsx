@@ -1,7 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Terminal, PenTool, Cpu, Lightbulb, Megaphone, Search, Users, MapPin, Clock } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Terminal, PenTool, Cpu, Lightbulb, Megaphone, Search, Users, MapPin } from "lucide-react";
 import { useState } from "react";
 
 const technicalEvents = [
@@ -11,7 +11,6 @@ const technicalEvents = [
     icon: Terminal,
     color: "from-blue-500 to-indigo-600",
     format: "Individual",
-
   },
   {
     title: "UI-VERSE",
@@ -19,7 +18,6 @@ const technicalEvents = [
     icon: PenTool,
     color: "from-purple-500 to-pink-500",
     format: "Individual",
-
   },
   {
     title: "LOGIC TRAP",
@@ -27,7 +25,6 @@ const technicalEvents = [
     icon: Cpu,
     color: "from-emerald-500 to-teal-600",
     format: "Individual / Team of 2",
-
   },
   {
     title: "IDEA FORGE",
@@ -35,7 +32,6 @@ const technicalEvents = [
     icon: Lightbulb,
     color: "from-amber-400 to-orange-500",
     format: "Individual / Team of 2",
-
   }
 ];
 
@@ -46,7 +42,6 @@ const nonTechnicalEvents = [
     icon: Megaphone,
     color: "from-rose-500 to-red-600",
     format: "Individual / Team of 2",
-
   },
   {
     title: "BID & BUILD",
@@ -54,7 +49,6 @@ const nonTechnicalEvents = [
     icon: Search,
     color: "from-cyan-500 to-blue-500",
     format: "Individual / Team of 2",
-
   }
 ];
 
@@ -63,70 +57,107 @@ export function Events() {
   const activeEvents = activeTab === "technical" ? technicalEvents : nonTechnicalEvents;
 
   return (
-    <section id="events" className="w-full py-16 md:py-24 bg-white relative">
-      <div className="container mx-auto px-4 max-w-6xl">
-        <div className="text-center mb-10 md:mb-16">
+    <section id="events" className="w-full py-16 md:py-24 bg-white relative overflow-hidden">
+      {/* Subtle background ambient blur */}
+      <div className="absolute top-1/3 -left-32 w-80 h-80 bg-blue-100/40 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-10 -right-32 w-80 h-80 bg-purple-100/40 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="container mx-auto px-4 max-w-6xl relative z-10">
+        <motion.div
+          initial={{ opacity: 0, y: 25 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.5 }}
+          className="text-center mb-10 md:mb-16"
+        >
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200/80 text-blue-700 text-xs font-semibold uppercase tracking-wider mb-3">
             <MapPin className="h-3.5 w-3.5 text-blue-600" />
             Venue: Conference Hall, St. Xavier&apos;s Catholic College of Engineering, Nagercoil &bull; Starts 9:00 AM
           </div>
-          <h2 className="text-3xl md:text-5xl font-bold text-slate-900 mb-4 tracking-tight" style={{ fontFamily: "var(--font-orbitron)" }}>Symposium Events</h2>
+          <h2 className="text-3xl md:text-5xl font-bold text-slate-900 mb-4 tracking-tight" style={{ fontFamily: "var(--font-orbitron)" }}>
+            Symposium Events
+          </h2>
           <p className="text-base sm:text-lg text-slate-500 max-w-2xl mx-auto mb-6 md:mb-8 px-2">
             Compete, showcase your skills, and win exciting prizes across our technical and non-technical events.
           </p>
 
           <div className="flex justify-center w-full px-2">
-            <div className="flex flex-col sm:flex-row bg-slate-100 p-1.5 rounded-2xl w-full sm:w-auto gap-1">
+            <div className="flex flex-col sm:flex-row bg-slate-100/90 p-1.5 rounded-2xl w-full sm:w-auto gap-1 border border-slate-200/70 shadow-inner">
               <button
+                type="button"
                 onClick={() => setActiveTab("technical")}
-                className={`px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl font-semibold text-sm sm:text-base transition-all w-full sm:w-auto ${activeTab === "technical" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                className={`relative px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl font-semibold text-sm sm:text-base transition-all duration-300 w-full sm:w-auto cursor-pointer ${
+                  activeTab === "technical"
+                    ? "bg-white text-blue-600 shadow-sm shadow-blue-500/10 scale-100"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
               >
                 Technical Events
               </button>
               <button
+                type="button"
                 onClick={() => setActiveTab("non-technical")}
-                className={`px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl font-semibold text-sm sm:text-base transition-all w-full sm:w-auto ${activeTab === "non-technical" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                className={`relative px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl font-semibold text-sm sm:text-base transition-all duration-300 w-full sm:w-auto cursor-pointer ${
+                  activeTab === "non-technical"
+                    ? "bg-white text-blue-600 shadow-sm shadow-blue-500/10 scale-100"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
               >
                 Non-Technical Events
               </button>
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
-          {activeEvents.map((event, index) => {
-            const Icon = event.icon;
-            return (
-              <motion.div
-                key={event.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: index * 0.1 }}
-                className="group relative bg-white border border-slate-100 rounded-2xl sm:rounded-3xl p-6 sm:p-8 hover:shadow-2xl hover:shadow-slate-200/50 transition-all hover:-translate-y-1 overflow-hidden"
-              >
-                <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${event.color} opacity-5 rounded-bl-full group-hover:scale-150 transition-transform duration-500`}></div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.35 }}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6"
+          >
+            {activeEvents.map((event, index) => {
+              const Icon = event.icon;
+              return (
+                <motion.div
+                  key={event.title}
+                  initial={{ opacity: 0, y: 30, scale: 0.97 }}
+                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                  viewport={{ once: true, margin: "-60px" }}
+                  transition={{ duration: 0.45, delay: index * 0.08, ease: "easeOut" }}
+                  whileHover={{ y: -6, transition: { duration: 0.2 } }}
+                  className="group relative bg-white border border-slate-200/80 hover:border-blue-300/80 rounded-2xl sm:rounded-3xl p-6 sm:p-8 hover:shadow-2xl hover:shadow-blue-500/10 transition-all overflow-hidden"
+                >
+                  <div
+                    className={`absolute top-0 right-0 w-36 h-36 bg-gradient-to-br ${event.color} opacity-5 rounded-bl-full group-hover:scale-150 group-hover:opacity-10 transition-all duration-500`}
+                  />
 
-                <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br ${event.color} mb-5 sm:mb-6 shadow-lg relative z-10`}>
-                  <Icon className="text-white h-5 w-5 sm:h-6 sm:w-6" />
-                </div>
-
-                <h3 className="text-xl sm:text-2xl font-bold text-slate-900 mb-2 sm:mb-3 relative z-10">{event.title}</h3>
-                <p className="text-sm sm:text-base text-slate-600 mb-5 sm:mb-6 leading-relaxed relative z-10">
-                  {event.description}
-                </p>
-
-                <div className="flex flex-wrap items-center gap-2.5 pt-4 border-t border-slate-100 relative z-10">
-                  <div className="flex items-center text-xs sm:text-sm font-medium text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
-                    <Users className="h-4 w-4 mr-1.5 text-slate-500" />
-                    {event.format}
+                  <div
+                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br ${event.color} mb-5 sm:mb-6 shadow-lg shadow-blue-500/15 relative z-10 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300`}
+                  >
+                    <Icon className="text-white h-5 w-5 sm:h-6 sm:w-6" />
                   </div>
 
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
+                  <h3 className="text-xl sm:text-2xl font-bold text-slate-900 mb-2 sm:mb-3 relative z-10 group-hover:text-blue-600 transition-colors">
+                    {event.title}
+                  </h3>
+                  <p className="text-sm sm:text-base text-slate-600 mb-5 sm:mb-6 leading-relaxed relative z-10">
+                    {event.description}
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-2.5 pt-4 border-t border-slate-100 relative z-10">
+                    <div className="flex items-center text-xs sm:text-sm font-medium text-slate-700 bg-slate-50 group-hover:bg-blue-50/50 px-3 py-1.5 rounded-lg border border-slate-100 transition-colors">
+                      <Users className="h-4 w-4 mr-1.5 text-slate-500 group-hover:text-blue-600 transition-colors" />
+                      {event.format}
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </section>
   );

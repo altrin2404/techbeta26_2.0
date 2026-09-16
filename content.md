@@ -12,9 +12,10 @@ A National Level Technical Symposium
 ## 📅 Schedule
 
 - **09:00 AM** - Inauguration: Official opening ceremony of TECHBETA 2026 2.0 at Conference Hall, St. Xavier's Catholic College of Engineering, Nagercoil.
-- **09:30 AM** - Events Commences: Commencement of all technical competitions and workshops across labs & halls.
-- **01:00 PM** - Lunch Break: Lunch will be provided at the food court.
-- **02:00 PM** - Valedictory & Prize Distribution: Closing ceremony and awarding the winners at the Conference Hall.
+- **10:30 AM** - Technical Events Commence: Commencement of all technical competitions and challenges across designated labs & halls.
+- **12:15 PM** - Lunch Break: Lunch will be provided at the food court.
+- **01:00 PM** - Non-Technical Events: Commencement of exciting non-technical competitions and interactive sessions.
+- **03:00 PM** - Valedictory Events: Closing ceremony, prize distribution, and awarding the winners at the Conference Hall.
 - **04:15 PM** - Departure: Make use of College Buses.
 
 ---
@@ -88,6 +89,8 @@ A: A participant can register for any 2 events, and not more than 2.
 - **Er. P. Agnes Alex Rathy** - Faculty Advisor-BRIGITZ (Assistant Professor-IT)
 - **Mr. A. Altrin Benser** - Secretary (Final Year-IT)
 - **Ms. C. S. Absara** - Treasurer (Final Year-IT)
+- **Mr. P. K. Haris Aniruth** - Joint Secretary (Third Year - IT)
+- **Ms. S. S. Shernika** - Joint Treasurer (Third Year - IT)
 
 ---
 

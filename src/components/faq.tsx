@@ -35,7 +35,7 @@ const faqs = [
   },
   {
     q: "How many events can a participant register for?",
-    a: "A participant can register for any 2 events, and not more than 2."
+    a: "A participant can register for any 2 Technical events, and any non-technical events."
   }
 ];
 
@@ -43,30 +43,42 @@ export function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <section id="faq" className="w-full py-16 md:py-24 bg-white relative">
-      <div className="container mx-auto px-4 max-w-3xl">
-        <div className="text-center mb-10 md:mb-16">
-          <h2 className="text-3xl md:text-5xl font-bold text-slate-900 mb-4 tracking-tight" style={{ fontFamily: "var(--font-orbitron)" }}>Frequently Asked Questions</h2>
+    <section id="faq" className="w-full py-16 md:py-24 bg-white relative overflow-hidden">
+      {/* Background glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-50/60 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="container mx-auto px-4 max-w-3xl relative z-10">
+        <motion.div
+          initial={{ opacity: 0, y: 25 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-70px" }}
+          transition={{ duration: 0.5 }}
+          className="text-center mb-10 md:mb-16"
+        >
+          <h2 className="text-3xl md:text-5xl font-bold text-slate-900 mb-4 tracking-tight" style={{ fontFamily: "var(--font-orbitron)" }}>
+            Frequently Asked Questions
+          </h2>
           <p className="text-base sm:text-lg text-slate-500 px-2">Everything you need to know about TECHBETA 2026 2.0.</p>
-        </div>
+        </motion.div>
 
         <div className="space-y-3 sm:space-y-4">
           {faqs.map((faq, index) => (
-            <motion.div 
+            <motion.div
               key={index}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 15 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.3, delay: index * 0.05 }}
-              className="border border-slate-200 rounded-xl sm:rounded-2xl overflow-hidden bg-white shadow-sm"
+              transition={{ duration: 0.35, delay: index * 0.05 }}
+              whileHover={{ scale: 1.008, transition: { duration: 0.15 } }}
+              className="border border-slate-200/90 hover:border-blue-300 rounded-xl sm:rounded-2xl overflow-hidden bg-white shadow-sm hover:shadow-md transition-all"
             >
               <button
                 onClick={() => setOpenIndex(openIndex === index ? null : index)}
                 className="flex items-center justify-between w-full p-4 sm:p-6 text-left focus:outline-none focus-visible:bg-slate-50 hover:bg-slate-50 transition-colors gap-4"
               >
                 <span className="font-semibold text-sm sm:text-base text-slate-900 leading-snug">{faq.q}</span>
-                <ChevronDown 
-                  className={`h-5 w-5 text-slate-500 shrink-0 transition-transform duration-300 ${openIndex === index ? 'rotate-180' : ''}`} 
+                <ChevronDown
+                  className={`h-5 w-5 text-slate-500 shrink-0 transition-transform duration-300 ${openIndex === index ? 'rotate-180' : ''}`}
                 />
               </button>
               <AnimatePresence>
