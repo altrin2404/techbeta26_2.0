@@ -35,6 +35,7 @@ import {
   MapPin,
   Clock,
 } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
 
 export interface Participant {
   name: string;
@@ -93,7 +94,11 @@ export function Registration() {
 
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
   const [regId, setRegId] = useState("");
+  const [participantIds, setParticipantIds] = useState<Record<number, string>>({});
+  const [primaryParticipantId, setPrimaryParticipantId] = useState<string>("");
   const [isDownloading, setIsDownloading] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const ticketRef = useRef<HTMLDivElement>(null);
@@ -109,6 +114,52 @@ export function Registration() {
   );
   const showTeamName = members.length > 1 || isTeamCompetitionChosen || forceShowTeamName || Boolean(teamName);
 
+  const validateSingleField = (fieldKey: string, value: string): string => {
+    if (fieldKey.endsWith("-name")) {
+      if (!value.trim()) return "Full name is required";
+      if (value.trim().length < 2) return "Name must be at least 2 characters";
+      return "";
+    }
+    if (fieldKey.endsWith("-email")) {
+      if (!value.trim()) return "Email address is required";
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(value.trim())) return "Enter a valid email address (e.g. name@domain.com)";
+      return "";
+    }
+    if (fieldKey.endsWith("-phone")) {
+      const clean = value.replace(/\D/g, "");
+      if (!clean) return "Mobile number is required";
+      if (clean.length < 10) return "Must be 10 digits";
+      if (!/^[6-9]\d{9}$/.test(clean)) return "Enter a valid Indian mobile number starting with 6-9";
+      return "";
+    }
+    if (fieldKey.endsWith("-department")) {
+      if (!value.trim()) return "Department is required";
+      return "";
+    }
+    if (fieldKey.endsWith("-year")) {
+      if (!value.trim()) return "Please select your year";
+      return "";
+    }
+    if (fieldKey.endsWith("-college")) {
+      if (!value.trim()) return "College name is required";
+      return "";
+    }
+    if (fieldKey === "utr") {
+      if (!value.trim()) return "UPI Transaction Reference ID / UTR is required";
+      if (value.trim().length < 10) return "UTR must be at least 10-12 characters";
+      if (!/^[A-Za-z0-9]+$/.test(value.trim())) return "UTR should only contain letters and numbers without spaces";
+      return "";
+    }
+    return "";
+  };
+
+  const handleFieldBlur = (fieldKey: string, value: string) => {
+    setTouchedFields((prev) => ({ ...prev, [fieldKey]: true }));
+    const error = validateSingleField(fieldKey, value);
+    setFieldErrors((prev) => ({ ...prev, [fieldKey]: error }));
+  };
+
   const resetForm = () => {
     setMembers([createEmptyParticipant()]);
     setTeamName("");
@@ -117,7 +168,11 @@ export function Registration() {
     setCurrentStep(1);
     setStatus("idle");
     setErrorMessage("");
+    setFieldErrors({});
+    setTouchedFields({});
     setRegId("");
+    setParticipantIds({});
+    setPrimaryParticipantId("");
     setQrDataUrl("");
   };
 
@@ -135,7 +190,8 @@ export function Registration() {
 
   useEffect(() => {
     if (status === "success" && members[0]) {
-      const qrData = `${regId}|${members[0].name}|${members[0].college}`;
+      const pId = primaryParticipantId || participantIds[0] || "TB001";
+      const qrData = `${pId}|${regId}|${members[0].name}|${members[0].college}`;
       import("qrcode")
         .then((QRCode) => {
           QRCode.toDataURL(qrData, {
@@ -156,7 +212,7 @@ export function Registration() {
           );
         });
     }
-  }, [status, regId, members]);
+  }, [status, regId, primaryParticipantId, participantIds, members]);
 
   // Member field update
   const updateMember = (index: number, field: keyof Participant, value: string | string[]) => {
@@ -165,6 +221,14 @@ export function Registration() {
       updated[index] = { ...updated[index], [field]: value };
       return updated;
     });
+
+    if (typeof value === "string") {
+      const fieldKey = `member-${index}-${field}`;
+      if (touchedFields[fieldKey]) {
+        const error = validateSingleField(fieldKey, value);
+        setFieldErrors((prev) => ({ ...prev, [fieldKey]: error }));
+      }
+    }
   };
 
   // Toggle Technical Event (Max 2)
@@ -184,6 +248,11 @@ export function Registration() {
         member.technicalEvents = [...current, eventId];
       }
       setErrorMessage("");
+      setFieldErrors((prevErrors) => {
+        const nextErrors = { ...prevErrors };
+        delete nextErrors[`member-${memberIndex}-events`];
+        return nextErrors;
+      });
       updated[memberIndex] = member;
       return updated;
     });
@@ -206,6 +275,11 @@ export function Registration() {
         member.nonTechnicalEvents = [...current, eventId];
       }
       setErrorMessage("");
+      setFieldErrors((prevErrors) => {
+        const nextErrors = { ...prevErrors };
+        delete nextErrors[`member-${memberIndex}-events`];
+        return nextErrors;
+      });
       updated[memberIndex] = member;
       return updated;
     });
@@ -221,51 +295,93 @@ export function Registration() {
   const handleRemoveMember = (index: number) => {
     if (members.length <= 1) return;
     setMembers((prev) => prev.filter((_, i) => i !== index));
+    // Clean up member field errors
+    setFieldErrors((prev) => {
+      const updated: Record<string, string> = {};
+      Object.entries(prev).forEach(([k, v]) => {
+        if (!k.startsWith(`member-${index}-`)) {
+          updated[k] = v;
+        }
+      });
+      return updated;
+    });
   };
 
   // Validate Step 1 before proceeding to Payment
   const validateStep1 = () => {
+    const errors: Record<string, string> = {};
+    const touched: Record<string, boolean> = {};
+    let firstErrorFieldId = "";
+
     for (let i = 0; i < members.length; i++) {
       const m = members[i];
       const memberLabel = `Member ${i + 1}`;
 
-      if (!m.name.trim()) {
-        setErrorMessage(`Please enter Full Name for ${memberLabel}.`);
-        return false;
+      const nameErr = validateSingleField(`member-${i}-name`, m.name);
+      if (nameErr) {
+        errors[`member-${i}-name`] = nameErr;
+        if (!firstErrorFieldId) firstErrorFieldId = i === 0 ? "first-participant-name" : `member-${i}-name`;
       }
-      if (!m.email.trim() || !m.email.includes("@")) {
-        setErrorMessage(`Please enter a valid Email for ${memberLabel}.`);
-        return false;
+      touched[`member-${i}-name`] = true;
+
+      const emailErr = validateSingleField(`member-${i}-email`, m.email);
+      if (emailErr) {
+        errors[`member-${i}-email`] = emailErr;
+        if (!firstErrorFieldId) firstErrorFieldId = `member-${i}-email`;
       }
-      if (!m.phone.trim() || m.phone.length < 10) {
-        setErrorMessage(`Please enter a valid 10-digit Mobile Number for ${memberLabel}.`);
-        return false;
+      touched[`member-${i}-email`] = true;
+
+      const phoneErr = validateSingleField(`member-${i}-phone`, m.phone);
+      if (phoneErr) {
+        errors[`member-${i}-phone`] = phoneErr;
+        if (!firstErrorFieldId) firstErrorFieldId = `member-${i}-phone`;
       }
-      if (!m.department.trim()) {
-        setErrorMessage(`Please specify Department for ${memberLabel}.`);
-        return false;
+      touched[`member-${i}-phone`] = true;
+
+      const deptErr = validateSingleField(`member-${i}-department`, m.department);
+      if (deptErr) {
+        errors[`member-${i}-department`] = deptErr;
+        if (!firstErrorFieldId) firstErrorFieldId = `member-${i}-department`;
       }
-      if (!m.year.trim()) {
-        setErrorMessage(`Please select Year for ${memberLabel}.`);
-        return false;
+      touched[`member-${i}-department`] = true;
+
+      const yrErr = validateSingleField(`member-${i}-year`, m.year);
+      if (yrErr) {
+        errors[`member-${i}-year`] = yrErr;
+        if (!firstErrorFieldId) firstErrorFieldId = `member-${i}-year`;
       }
-      if (!m.college.trim()) {
-        setErrorMessage(`Please enter College name for ${memberLabel}.`);
-        return false;
+      touched[`member-${i}-year`] = true;
+
+      const collErr = validateSingleField(`member-${i}-college`, m.college);
+      if (collErr) {
+        errors[`member-${i}-college`] = collErr;
+        if (!firstErrorFieldId) firstErrorFieldId = `member-${i}-college`;
       }
+      touched[`member-${i}-college`] = true;
+
       if (m.technicalEvents.length === 0 && m.nonTechnicalEvents.length === 0) {
-        setErrorMessage(`Please select at least 1 event for ${memberLabel}.`);
-        return false;
-      }
-      if (m.technicalEvents.length > 2) {
-        setErrorMessage(`${memberLabel} cannot register for more than 2 technical events.`);
-        return false;
-      }
-      if (m.nonTechnicalEvents.length > 2) {
-        setErrorMessage(`${memberLabel} cannot register for more than 2 non-technical events.`);
-        return false;
+        errors[`member-${i}-events`] = `Please select at least 1 event for ${memberLabel}.`;
+      } else if (m.technicalEvents.length > 2) {
+        errors[`member-${i}-events`] = `${memberLabel} cannot register for more than 2 technical events.`;
+      } else if (m.nonTechnicalEvents.length > 2) {
+        errors[`member-${i}-events`] = `${memberLabel} cannot register for more than 2 non-technical events.`;
       }
     }
+
+    setFieldErrors(errors);
+    setTouchedFields((prev) => ({ ...prev, ...touched }));
+
+    if (Object.keys(errors).length > 0) {
+      const firstError = Object.values(errors)[0];
+      setErrorMessage(`Please complete all required fields`);
+      if (firstErrorFieldId) {
+        const el = document.getElementById(firstErrorFieldId);
+        el?.focus();
+        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      return false;
+    }
+
     setErrorMessage("");
     return true;
   };
@@ -319,6 +435,7 @@ export function Registration() {
       pdf.addImage(dataUrl, "PNG", margin, margin, imgWidth, imgHeight);
       const firstName = members[0]?.name?.split(" ")[0] || "Pass";
       pdf.save(`TechBETA-2026-2.0-EntryPass-${firstName}.pdf`);
+      trackEvent("entry_pass_downloaded", { id: regId, memberCount: members.length });
     } catch (primaryErr) {
       console.warn("Primary PDF generation failed, attempting fallback:", primaryErr);
       try {
@@ -350,12 +467,20 @@ export function Registration() {
     e.preventDefault();
     setErrorMessage("");
 
-    if (!paymentUtr.trim()) {
-      setErrorMessage("Please enter your UPI Transaction Reference ID / UTR number.");
+    const utrError = validateSingleField("utr", paymentUtr);
+    setTouchedFields((prev) => ({ ...prev, utr: true }));
+    if (utrError) {
+      setFieldErrors((prev) => ({ ...prev, utr: utrError }));
+      setErrorMessage(utrError);
+      document.getElementById("utr")?.focus();
       return;
     }
 
     setStatus("loading");
+    trackEvent("registration_attempt", {
+      memberCount: members.length,
+      isTeam: members.length > 1,
+    });
 
     try {
       const res = await fetch("/api/register", {
@@ -374,12 +499,31 @@ export function Registration() {
         throw new Error(data.error || "Registration failed. Please try again.");
       }
 
-      setRegId(data.id || data.teamId || "TB26-CONFIRMED");
+      const confirmedId = data.id || data.teamId || "TB26-CONFIRMED";
+      setRegId(confirmedId);
+
+      const pIdMap: Record<number, string> = {};
+      if (Array.isArray(data.members)) {
+        data.members.forEach((m: { participantId?: string }, idx: number) => {
+          if (m.participantId) {
+            pIdMap[idx] = m.participantId;
+          }
+        });
+      }
+      setParticipantIds(pIdMap);
+      setPrimaryParticipantId(data.primaryParticipantId || pIdMap[0] || "TB001");
+
       setStatus("success");
+      trackEvent("registration_success", {
+        teamId: confirmedId,
+        participantId: data.primaryParticipantId || pIdMap[0] || "TB001",
+        memberCount: members.length,
+      });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "An unexpected error occurred.";
       setErrorMessage(message);
       setStatus("error");
+      trackEvent("registration_error", { error: message });
     }
   };
 
@@ -484,8 +628,12 @@ export function Registration() {
                   >
                     You&apos;re Registered!
                   </h3>
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-900 font-mono font-bold text-xs sm:text-sm mb-3 shadow-2xs">
+                    <span className="text-blue-600 font-sans font-semibold">Your Participant ID:</span>
+                    <span className="font-extrabold text-blue-700">{primaryParticipantId || participantIds[0] || "TB001"}</span>
+                  </div>
                   <p className="text-slate-500 text-sm sm:text-base max-w-md">
-                    A confirmation email with your Entry Pass has been sent to{" "}
+                    A confirmation email with your Entry Pass and ID has been sent to{" "}
                     <span className="font-semibold text-blue-600">{members[0]?.email}</span>.
                     Check your inbox!
                   </p>
@@ -557,7 +705,7 @@ export function Registration() {
                                 }
                                 width={120}
                                 height={120}
-                                alt="Entry Gate QR Code"
+                                alt={`Official Entry Ticket QR code for ${members[0]?.name || 'symposium participant'}`}
                                 className="block rounded-sm"
                                 crossOrigin="anonymous"
                               />
@@ -576,16 +724,28 @@ export function Registration() {
                                 <span className="font-extrabold text-sm text-blue-900">{teamName}</span>
                               </div>
                             )}
-                            {members.map((m, idx) => (
-                              <div
-                                key={idx}
-                                className={idx > 0 ? "pt-4 border-t-2 border-dashed border-slate-200" : ""}
-                              >
-                                {members.length > 1 && (
-                                  <div className="inline-block px-2 py-0.5 rounded-md bg-slate-800 text-white text-[10px] font-bold uppercase tracking-wider mb-2">
-                                    Participant {idx + 1}
+                            {members.map((m, idx) => {
+                              const pId = participantIds[idx] || (idx === 0 ? primaryParticipantId : "") || `TB${String(idx + 1).padStart(3, '0')}`;
+                              return (
+                                <div
+                                  key={idx}
+                                  className={idx > 0 ? "pt-4 border-t-2 border-dashed border-slate-200" : ""}
+                                >
+                                  <div className="flex items-center justify-between gap-2 mb-2">
+                                    {members.length > 1 ? (
+                                      <div className="inline-block px-2 py-0.5 rounded-md bg-slate-800 text-white text-[10px] font-bold uppercase tracking-wider">
+                                        Participant {idx + 1}
+                                      </div>
+                                    ) : (
+                                      <div className="inline-block px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-bold uppercase tracking-wider">
+                                        Participant Pass
+                                      </div>
+                                    )}
+                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-blue-600 text-white font-mono font-black text-xs shadow-2xs">
+                                      <span className="text-[10px] uppercase font-sans font-bold text-blue-100">ID:</span>
+                                      <span>{pId}</span>
+                                    </div>
                                   </div>
-                                )}
 
                                 {/* Name */}
                                 <div className="mb-2">
@@ -649,7 +809,8 @@ export function Registration() {
                                   )}
                                 </div>
                               </div>
-                            ))}
+                            );
+                          })}
                           </div>
                         </div>
 
@@ -894,87 +1055,180 @@ export function Registration() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 mb-6">
                         {/* Full Name */}
                         <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                            <User className="h-3.5 w-3.5 text-slate-500" />
-                            Full Name <span className="text-red-500">*</span>
-                          </label>
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                              <User className="h-3.5 w-3.5 text-slate-500" />
+                              Full Name <span className="text-red-500">*</span>
+                            </label>
+                            {touchedFields[`member-${mIdx}-name`] && !fieldErrors[`member-${mIdx}-name`] && member.name && (
+                              <span className="text-[10px] text-green-600 font-semibold flex items-center gap-0.5">
+                                <Check className="h-3 w-3" /> Valid
+                              </span>
+                            )}
+                          </div>
                           <input
-                            id={mIdx === 0 ? "first-participant-name" : undefined}
+                            id={mIdx === 0 ? "first-participant-name" : `member-${mIdx}-name`}
                             type="text"
                             required
                             value={member.name}
                             onChange={(e) => updateMember(mIdx, "name", e.target.value)}
+                            onBlur={() => handleFieldBlur(`member-${mIdx}-name`, member.name)}
                             placeholder="e.g. Altrin Benser"
-                            className="w-full h-11 px-3.5 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-500 placeholder:opacity-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm transition-all focus:ring-offset-1"
+                            className={`w-full h-11 px-3.5 rounded-xl border bg-white text-slate-900 placeholder:text-slate-500 placeholder:opacity-100 outline-none text-sm transition-all focus:ring-2 focus:ring-offset-1 ${fieldErrors[`member-${mIdx}-name`]
+                                ? "border-red-400 focus:ring-red-400 bg-red-50/20"
+                                : touchedFields[`member-${mIdx}-name`] && member.name
+                                  ? "border-green-500/70 focus:ring-green-500"
+                                  : "border-slate-300 focus:ring-blue-500"
+                              }`}
                           />
+                          {fieldErrors[`member-${mIdx}-name`] && (
+                            <p className="text-[11px] text-red-600 font-medium flex items-center gap-1 mt-1">
+                              <AlertCircle className="h-3 w-3 shrink-0" />
+                              {fieldErrors[`member-${mIdx}-name`]}
+                            </p>
+                          )}
                         </div>
 
                         {/* Email */}
                         <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                            <Mail className="h-3.5 w-3.5 text-slate-500" />
-                            Email <span className="text-red-500">*</span>
-                          </label>
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                              <Mail className="h-3.5 w-3.5 text-slate-500" />
+                              Email <span className="text-red-500">*</span>
+                            </label>
+                            {touchedFields[`member-${mIdx}-email`] && !fieldErrors[`member-${mIdx}-email`] && member.email && (
+                              <span className="text-[10px] text-green-600 font-semibold flex items-center gap-0.5">
+                                <Check className="h-3 w-3" /> Valid
+                              </span>
+                            )}
+                          </div>
                           <input
+                            id={`member-${mIdx}-email`}
                             type="email"
                             required
                             value={member.email}
                             onChange={(e) => updateMember(mIdx, "email", e.target.value)}
+                            onBlur={() => handleFieldBlur(`member-${mIdx}-email`, member.email)}
                             placeholder="e.g. altrin@example.com"
-                            className="w-full h-11 px-3.5 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-500 placeholder:opacity-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+                            className={`w-full h-11 px-3.5 rounded-xl border bg-white text-slate-900 placeholder:text-slate-500 placeholder:opacity-100 outline-none text-sm transition-all focus:ring-2 focus:ring-offset-1 ${fieldErrors[`member-${mIdx}-email`]
+                                ? "border-red-400 focus:ring-red-400 bg-red-50/20"
+                                : touchedFields[`member-${mIdx}-email`] && member.email
+                                  ? "border-green-500/70 focus:ring-green-500"
+                                  : "border-slate-300 focus:ring-blue-500"
+                              }`}
                           />
+                          {fieldErrors[`member-${mIdx}-email`] && (
+                            <p className="text-[11px] text-red-600 font-medium flex items-center gap-1 mt-1">
+                              <AlertCircle className="h-3 w-3 shrink-0" />
+                              {fieldErrors[`member-${mIdx}-email`]}
+                            </p>
+                          )}
                         </div>
 
                         {/* Mobile */}
                         <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                            <Phone className="h-3.5 w-3.5 text-slate-500" />
-                            Mobile <span className="text-red-500">*</span>
-                          </label>
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                              <Phone className="h-3.5 w-3.5 text-slate-500" />
+                              Mobile <span className="text-red-500">*</span>
+                            </label>
+                            {touchedFields[`member-${mIdx}-phone`] && !fieldErrors[`member-${mIdx}-phone`] && member.phone.length === 10 && (
+                              <span className="text-[10px] text-green-600 font-semibold flex items-center gap-0.5">
+                                <Check className="h-3 w-3" /> Valid
+                              </span>
+                            )}
+                          </div>
                           <input
+                            id={`member-${mIdx}-phone`}
                             type="tel"
                             required
                             value={member.phone}
                             onChange={(e) => updateMember(mIdx, "phone", e.target.value.replace(/[^0-9]/g, "").slice(0, 10))}
+                            onBlur={() => handleFieldBlur(`member-${mIdx}-phone`, member.phone)}
                             placeholder="e.g. 9876543210"
                             maxLength={10}
-                            className="w-full h-11 px-3.5 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-500 placeholder:opacity-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+                            className={`w-full h-11 px-3.5 rounded-xl border bg-white text-slate-900 placeholder:text-slate-500 placeholder:opacity-100 outline-none text-sm transition-all focus:ring-2 focus:ring-offset-1 ${fieldErrors[`member-${mIdx}-phone`]
+                                ? "border-red-400 focus:ring-red-400 bg-red-50/20"
+                                : touchedFields[`member-${mIdx}-phone`] && member.phone.length === 10
+                                  ? "border-green-500/70 focus:ring-green-500"
+                                  : "border-slate-300 focus:ring-blue-500"
+                              }`}
                           />
+                          {fieldErrors[`member-${mIdx}-phone`] && (
+                            <p className="text-[11px] text-red-600 font-medium flex items-center gap-1 mt-1">
+                              <AlertCircle className="h-3 w-3 shrink-0" />
+                              {fieldErrors[`member-${mIdx}-phone`]}
+                            </p>
+                          )}
                         </div>
 
                         {/* Department */}
                         <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                            <Layers className="h-3.5 w-3.5 text-slate-500" />
-                            Department <span className="text-red-500">*</span>
-                          </label>
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                              <Layers className="h-3.5 w-3.5 text-slate-500" />
+                              Department <span className="text-red-500">*</span>
+                            </label>
+                            {touchedFields[`member-${mIdx}-department`] && !fieldErrors[`member-${mIdx}-department`] && member.department && (
+                              <span className="text-[10px] text-green-600 font-semibold flex items-center gap-0.5">
+                                <Check className="h-3 w-3" /> Valid
+                              </span>
+                            )}
+                          </div>
                           <input
+                            id={`member-${mIdx}-department`}
                             type="text"
                             required
                             list={`dept-list-${mIdx}`}
                             value={member.department}
                             onChange={(e) => updateMember(mIdx, "department", e.target.value)}
+                            onBlur={() => handleFieldBlur(`member-${mIdx}-department`, member.department)}
                             placeholder="e.g. Information Technology"
-                            className="w-full h-11 px-3.5 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-500 placeholder:opacity-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+                            className={`w-full h-11 px-3.5 rounded-xl border bg-white text-slate-900 placeholder:text-slate-500 placeholder:opacity-100 outline-none text-sm transition-all focus:ring-2 focus:ring-offset-1 ${fieldErrors[`member-${mIdx}-department`]
+                                ? "border-red-400 focus:ring-red-400 bg-red-50/20"
+                                : touchedFields[`member-${mIdx}-department`] && member.department
+                                  ? "border-green-500/70 focus:ring-green-500"
+                                  : "border-slate-300 focus:ring-blue-500"
+                              }`}
                           />
                           <datalist id={`dept-list-${mIdx}`}>
                             {DEPARTMENTS.map((dept) => (
                               <option key={dept} value={dept} />
                             ))}
                           </datalist>
+                          {fieldErrors[`member-${mIdx}-department`] && (
+                            <p className="text-[11px] text-red-600 font-medium flex items-center gap-1 mt-1">
+                              <AlertCircle className="h-3 w-3 shrink-0" />
+                              {fieldErrors[`member-${mIdx}-department`]}
+                            </p>
+                          )}
                         </div>
 
                         {/* Select Year */}
                         <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                            <GraduationCap className="h-3.5 w-3.5 text-slate-500" />
-                            Select Year <span className="text-red-500">*</span>
-                          </label>
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                              <GraduationCap className="h-3.5 w-3.5 text-slate-500" />
+                              Select Year <span className="text-red-500">*</span>
+                            </label>
+                            {touchedFields[`member-${mIdx}-year`] && !fieldErrors[`member-${mIdx}-year`] && member.year && (
+                              <span className="text-[10px] text-green-600 font-semibold flex items-center gap-0.5">
+                                <Check className="h-3 w-3" /> Valid
+                              </span>
+                            )}
+                          </div>
                           <select
+                            id={`member-${mIdx}-year`}
                             required
                             value={member.year}
                             onChange={(e) => updateMember(mIdx, "year", e.target.value)}
-                            className="w-full h-11 px-3.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm text-slate-900 font-medium"
+                            onBlur={() => handleFieldBlur(`member-${mIdx}-year`, member.year)}
+                            className={`w-full h-11 px-3.5 rounded-xl border bg-white outline-none text-sm text-slate-900 font-medium transition-all focus:ring-2 focus:ring-offset-1 ${fieldErrors[`member-${mIdx}-year`]
+                                ? "border-red-400 focus:ring-red-400 bg-red-50/20"
+                                : touchedFields[`member-${mIdx}-year`] && member.year
+                                  ? "border-green-500/70 focus:ring-green-500"
+                                  : "border-slate-300 focus:ring-blue-500"
+                              }`}
                           >
                             <option value="">Select Year</option>
                             {YEARS.map((yr) => (
@@ -983,22 +1237,48 @@ export function Registration() {
                               </option>
                             ))}
                           </select>
+                          {fieldErrors[`member-${mIdx}-year`] && (
+                            <p className="text-[11px] text-red-600 font-medium flex items-center gap-1 mt-1">
+                              <AlertCircle className="h-3 w-3 shrink-0" />
+                              {fieldErrors[`member-${mIdx}-year`]}
+                            </p>
+                          )}
                         </div>
 
                         {/* College */}
                         <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                            <Building2 className="h-3.5 w-3.5 text-slate-500" />
-                            College <span className="text-red-500">*</span>
-                          </label>
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                              <Building2 className="h-3.5 w-3.5 text-slate-500" />
+                              College <span className="text-red-500">*</span>
+                            </label>
+                            {touchedFields[`member-${mIdx}-college`] && !fieldErrors[`member-${mIdx}-college`] && member.college && (
+                              <span className="text-[10px] text-green-600 font-semibold flex items-center gap-0.5">
+                                <Check className="h-3 w-3" /> Valid
+                              </span>
+                            )}
+                          </div>
                           <input
+                            id={`member-${mIdx}-college`}
                             type="text"
                             required
                             value={member.college}
                             onChange={(e) => updateMember(mIdx, "college", e.target.value)}
+                            onBlur={() => handleFieldBlur(`member-${mIdx}-college`, member.college)}
                             placeholder="e.g. St. Xavier's Catholic College of Engineering"
-                            className="w-full h-11 px-3.5 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-500 placeholder:opacity-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+                            className={`w-full h-11 px-3.5 rounded-xl border bg-white text-slate-900 placeholder:text-slate-500 placeholder:opacity-100 outline-none text-sm transition-all focus:ring-2 focus:ring-offset-1 ${fieldErrors[`member-${mIdx}-college`]
+                                ? "border-red-400 focus:ring-red-400 bg-red-50/20"
+                                : touchedFields[`member-${mIdx}-college`] && member.college
+                                  ? "border-green-500/70 focus:ring-green-500"
+                                  : "border-slate-300 focus:ring-blue-500"
+                              }`}
                           />
+                          {fieldErrors[`member-${mIdx}-college`] && (
+                            <p className="text-[11px] text-red-600 font-medium flex items-center gap-1 mt-1">
+                              <AlertCircle className="h-3 w-3 shrink-0" />
+                              {fieldErrors[`member-${mIdx}-college`]}
+                            </p>
+                          )}
                         </div>
                       </div>
 
@@ -1037,16 +1317,16 @@ export function Registration() {
                                   disabled={isDisabled}
                                   onClick={() => toggleTechEvent(mIdx, evt.id)}
                                   className={`p-3 rounded-xl border text-left flex items-start gap-3 transition-all ${isSelected
-                                      ? "bg-blue-50/80 border-blue-500 text-blue-900 shadow-sm ring-1 ring-blue-500"
-                                      : isDisabled
-                                        ? "bg-slate-100/60 border-slate-200 text-slate-400 opacity-60 cursor-not-allowed"
-                                        : "bg-white border-slate-200 hover:border-blue-300 text-slate-700 hover:bg-slate-50/80"
+                                    ? "bg-blue-50/80 border-blue-500 text-blue-900 shadow-sm ring-1 ring-blue-500"
+                                    : isDisabled
+                                      ? "bg-slate-100/60 border-slate-200 text-slate-400 opacity-60 cursor-not-allowed"
+                                      : "bg-white border-slate-200 hover:border-blue-300 text-slate-700 hover:bg-slate-50/80"
                                     }`}
                                 >
                                   <div
                                     className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${isSelected
-                                        ? "bg-blue-600 text-white"
-                                        : "bg-slate-100 text-slate-600"
+                                      ? "bg-blue-600 text-white"
+                                      : "bg-slate-100 text-slate-600"
                                       }`}
                                   >
                                     <Icon className="h-4 w-4" />
@@ -1096,16 +1376,16 @@ export function Registration() {
                                   disabled={isDisabled}
                                   onClick={() => toggleNonTechEvent(mIdx, evt.id)}
                                   className={`p-3 rounded-xl border text-left flex items-start gap-3 transition-all ${isSelected
-                                      ? "bg-purple-50/80 border-purple-500 text-purple-900 shadow-sm ring-1 ring-purple-500"
-                                      : isDisabled
-                                        ? "bg-slate-100/60 border-slate-200 text-slate-400 opacity-60 cursor-not-allowed"
-                                        : "bg-white border-slate-200 hover:border-purple-300 text-slate-700 hover:bg-slate-50/80"
+                                    ? "bg-purple-50/80 border-purple-500 text-purple-900 shadow-sm ring-1 ring-purple-500"
+                                    : isDisabled
+                                      ? "bg-slate-100/60 border-slate-200 text-slate-400 opacity-60 cursor-not-allowed"
+                                      : "bg-white border-slate-200 hover:border-purple-300 text-slate-700 hover:bg-slate-50/80"
                                     }`}
                                 >
                                   <div
                                     className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${isSelected
-                                        ? "bg-purple-600 text-white"
-                                        : "bg-slate-100 text-slate-600"
+                                      ? "bg-purple-600 text-white"
+                                      : "bg-slate-100 text-slate-600"
                                       }`}
                                   >
                                     <Icon className="h-4 w-4" />
@@ -1129,6 +1409,13 @@ export function Registration() {
                             })}
                           </div>
                         </div>
+
+                        {fieldErrors[`member-${mIdx}-events`] && (
+                          <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium flex items-center gap-2">
+                            <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
+                            <span>{fieldErrors[`member-${mIdx}-events`]}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -1324,23 +1611,49 @@ export function Registration() {
                     </div>
                   </div>
 
-                  {/* Transaction ID / UTR Input */}
                   <div className="pt-4 border-t border-blue-200/60">
-                    <label htmlFor="utr" className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
-                      UPI Transaction ID / UTR Number <span className="text-red-500">*</span>
-                    </label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label htmlFor="utr" className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
+                        UPI Transaction ID / UTR Number <span className="text-red-500">*</span>
+                      </label>
+                      {touchedFields["utr"] && !fieldErrors["utr"] && paymentUtr.length >= 10 && (
+                        <span className="text-[10px] text-green-600 font-semibold flex items-center gap-0.5">
+                          <Check className="h-3 w-3" /> Valid UTR
+                        </span>
+                      )}
+                    </div>
                     <input
                       id="utr"
                       type="text"
                       required
                       value={paymentUtr}
-                      onChange={(e) => setPaymentUtr(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value.trim();
+                        setPaymentUtr(val);
+                        if (touchedFields["utr"]) {
+                          const err = validateSingleField("utr", val);
+                          setFieldErrors((prev) => ({ ...prev, utr: err }));
+                        }
+                      }}
+                      onBlur={() => handleFieldBlur("utr", paymentUtr)}
                       placeholder="e.g. 427819873421 or T260911001"
-                      className="w-full h-12 px-4 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-500 placeholder:opacity-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm font-mono font-medium"
+                      className={`w-full h-12 px-4 rounded-xl border bg-white text-slate-900 placeholder:text-slate-500 placeholder:opacity-100 outline-none text-sm font-mono font-medium transition-all ${fieldErrors["utr"]
+                          ? "border-red-400 focus:ring-2 focus:ring-red-400 bg-red-50/20"
+                          : touchedFields["utr"] && paymentUtr.length >= 10
+                            ? "border-green-500/80 focus:ring-2 focus:ring-green-500 bg-green-50/10"
+                            : "border-slate-300 focus:ring-2 focus:ring-blue-500"
+                        }`}
                     />
-                    <p className="text-[11px] text-slate-500 mt-1">
-                      You can find the 12-digit UTR in your payment app receipt under &apos;UPI Ref ID&apos; or &apos;UTR&apos;.
-                    </p>
+                    {fieldErrors["utr"] ? (
+                      <p className="text-[11px] text-red-600 font-medium mt-1.5 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3 shrink-0" />
+                        {fieldErrors["utr"]}
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-slate-600 mt-1">
+                        You can find the 12-digit UTR in your payment app receipt under &apos;UPI Ref ID&apos; or &apos;UTR&apos;.
+                      </p>
+                    )}
                   </div>
                 </div>
 

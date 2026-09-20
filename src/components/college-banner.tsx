@@ -11,7 +11,7 @@ export function CollegeBanner() {
           <div className="relative flex-grow h-14 sm:h-28 md:h-40 min-w-[120px]">
             <Image 
               src="/img/banner.jpeg" 
-              alt="College Header" 
+              alt="St. Xavier's Catholic College of Engineering - Autonomous, Accredited with 'A' Grade by NAAC banner" 
               fill
               sizes="(max-width: 640px) 70vw, (max-width: 1024px) 60vw, 50vw"
               className="object-contain object-left"
@@ -22,7 +22,7 @@ export function CollegeBanner() {
           <div className="relative w-14 h-14 sm:w-28 sm:h-28 md:w-40 md:h-40 flex-shrink-0">
             <Image 
               src="/img/brigitz-logo.png" 
-              alt="Brigitz Logo" 
+              alt="Brigitz - Department of Information Technology Official Student Association Logo" 
               fill
               sizes="(max-width: 640px) 56px, (max-width: 1024px) 112px, 160px"
               className="object-contain object-right"

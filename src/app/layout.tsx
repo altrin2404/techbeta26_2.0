@@ -33,6 +33,8 @@ const orbitron = Orbitron({
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { PageLoader } from "@/components/page-loader";
+import { CookieConsent } from "@/components/cookie-consent";
+import { Analytics } from "@/components/analytics";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -53,12 +55,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} ${orbitron.variable} h-full antialiased scroll-smooth scroll-pt-20 md:scroll-pt-28 overflow-x-hidden`}
     >
       <body className={`min-h-full flex flex-col bg-slate-950 text-cyan-50 font-[family-name:var(--font-inter)] overflow-x-hidden`}>
+        <Analytics />
         <PageLoader />
         <Navbar />
         <main className="flex-grow">
           {children}
         </main>
         <Footer />
+        <CookieConsent />
       </body>
     </html>
   );

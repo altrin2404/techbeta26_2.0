@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "reset-db": "node scripts/reset-registrations.js --delete-all"
   },
   "dependencies": {
     "clsx": "^2.1.1",

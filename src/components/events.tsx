@@ -1,34 +1,35 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Terminal, PenTool, Cpu, Lightbulb, Megaphone, Search, Users, MapPin } from "lucide-react";
+import { Terminal, PenTool, Cpu, Lightbulb, Megaphone, Search, Users, MapPin, Sparkles } from "lucide-react";
 import { useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 
 const technicalEvents = [
   {
     title: "GENBUILD",
-    description: "Participants are given a real-world problem statement and must transform their idea into a working prototype using Generative AI and AI-assisted development tools. They may use AI for coding, UI generation, debugging, and documentation, but must clearly explain how their solution works.",
+    description: "Build working prototypes from real-world problem statements using Generative AI tools.",
     icon: Terminal,
     color: "from-blue-500 to-indigo-600",
     format: "Individual",
   },
   {
     title: "UI-VERSE",
-    description: "Participants are given a design challenge and must create an attractive, functional, and user-friendly interface. They compete based on visual design, usability, creativity, and how effectively their design addresses the given problem.",
+    description: "Craft attractive, responsive, and user-friendly interfaces for a real-time design challenge.",
     icon: PenTool,
     color: "from-purple-500 to-pink-500",
     format: "Individual",
   },
   {
     title: "LOGIC TRAP",
-    description: "Participants are given a deliberately confusing or faulty problem statement containing hidden errors, missing information, or contradictions. They must identify the faults, correct the requirements, and present a practical technical solution.",
+    description: "Detect hidden contradictions, debug flawed logic, and architect robust technical solutions.",
     icon: Cpu,
     color: "from-emerald-500 to-teal-600",
     format: "Individual / Team of 2",
   },
   {
     title: "IDEA FORGE",
-    description: "Participants present an innovative technical idea or concept. They must clearly communicate the problem, proposed solution, novelty, technical approach, practical applications, and potential impact of their idea.",
+    description: "Pitch groundbreaking tech solutions and defend their architecture, feasibility, and impact.",
     icon: Lightbulb,
     color: "from-amber-400 to-orange-500",
     format: "Individual / Team of 2",
@@ -38,14 +39,14 @@ const technicalEvents = [
 const nonTechnicalEvents = [
   {
     title: "BRAND BLITZ",
-    description: "A creative advertising competition where participants are given a product or service and challenged to create and present an engaging advertisement. They develop the brand concept, tagline, promotional strategy, and advertisement while competing on creativity, persuasion, presentation, and marketing skills.",
+    description: "Create brand identity, catchy taglines, and deliver an engaging live advertising pitch.",
     icon: Megaphone,
     color: "from-rose-500 to-red-600",
     format: "Individual / Team of 2",
   },
   {
     title: "BID & BUILD",
-    description: "Teams receive a fixed budget of ₹100 and compete in an auction for around 25 everyday objects. Each team must strategically purchase exactly two items and combine them to create an innovative product. They then pitch its name, purpose, uniqueness, target customers, and market value.",
+    description: "Bid in a ₹100 auction for mystery items and combine them into an innovative new product.",
     icon: Search,
     color: "from-cyan-500 to-blue-500",
     format: "Individual / Team of 2",
@@ -77,33 +78,54 @@ export function Events() {
           <h2 className="text-3xl md:text-5xl font-bold text-slate-900 mb-4 tracking-tight" style={{ fontFamily: "var(--font-orbitron)" }}>
             Symposium Events
           </h2>
-          <p className="text-base sm:text-lg text-slate-500 max-w-2xl mx-auto mb-6 md:mb-8 px-2">
+          <p className="text-base sm:text-lg text-slate-700 max-w-2xl mx-auto mb-6 md:mb-8 px-2">
             Compete, showcase your skills, and win exciting prizes across our technical and non-technical events.
           </p>
 
           <div className="flex justify-center w-full px-2">
-            <div className="flex flex-col sm:flex-row bg-slate-100/90 p-1.5 rounded-2xl w-full sm:w-auto gap-1 border border-slate-200/70 shadow-inner">
+            <div className="relative inline-flex flex-col sm:flex-row bg-slate-900/90 p-1.5 sm:p-2 rounded-2xl sm:rounded-full border-2 border-slate-700/80 shadow-2xl backdrop-blur-md gap-2 sm:gap-2 max-w-xl w-full sm:w-auto">
+              {/* Technical Events Tab */}
               <button
                 type="button"
-                onClick={() => setActiveTab("technical")}
-                className={`relative px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl font-semibold text-sm sm:text-base transition-all duration-300 w-full sm:w-auto cursor-pointer ${
-                  activeTab === "technical"
-                    ? "bg-white text-blue-600 shadow-sm shadow-blue-500/10 scale-100"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
+                onClick={() => {
+                  setActiveTab("technical");
+                  trackEvent("events_tab_switch", { tab: "technical" });
+                }}
+                className={`relative px-5 sm:px-7 py-3 rounded-xl sm:rounded-full font-bold text-sm sm:text-base flex items-center justify-center gap-2.5 transition-all duration-300 cursor-pointer ${activeTab === "technical"
+                  ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white shadow-lg shadow-blue-500/35 ring-2 ring-blue-400/50 scale-[1.02]"
+                  : "text-slate-300 hover:text-white hover:bg-slate-800/80"
+                  }`}
               >
-                Technical Events
+                <Terminal className={`h-4 w-4 ${activeTab === "technical" ? "text-cyan-300" : "text-blue-400"}`} />
+                <span>Technical Events</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-mono font-extrabold ${activeTab === "technical"
+                  ? "bg-white/20 text-white"
+                  : "bg-slate-800 text-cyan-300 border border-slate-700"
+                  }`}>
+                  4
+                </span>
               </button>
+
+              {/* Non-Technical Events Tab - HIGH-VISIBILITY HIGHLIGHTED */}
               <button
                 type="button"
-                onClick={() => setActiveTab("non-technical")}
-                className={`relative px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl font-semibold text-sm sm:text-base transition-all duration-300 w-full sm:w-auto cursor-pointer ${
-                  activeTab === "non-technical"
-                    ? "bg-white text-blue-600 shadow-sm shadow-blue-500/10 scale-100"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
+                onClick={() => {
+                  setActiveTab("non-technical");
+                  trackEvent("events_tab_switch", { tab: "non-technical" });
+                }}
+                className={`relative px-5 sm:px-7 py-3 rounded-xl sm:rounded-full font-bold text-sm sm:text-base flex items-center justify-center gap-2.5 transition-all duration-300 cursor-pointer ${activeTab === "non-technical"
+                  ? "bg-gradient-to-r from-purple-600 via-pink-600 to-rose-500 text-white shadow-lg shadow-purple-500/35 ring-2 ring-pink-400/50 scale-[1.02]"
+                  : "text-white bg-gradient-to-r from-purple-900/60 to-pink-900/50 border-2 border-pink-500/60 shadow-md shadow-purple-500/20 hover:border-pink-400 hover:scale-[1.02]"
+                  }`}
               >
-                Non-Technical Events
+                <Sparkles className={`h-4 w-4 ${activeTab === "non-technical" ? "text-yellow-200" : "text-pink-300 animate-pulse"}`} />
+                <span>Non-Technical Events</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-mono font-extrabold ${activeTab === "non-technical"
+                  ? "bg-white/20 text-white"
+                  : "bg-pink-500/30 text-pink-200 border border-pink-400/50"
+                  }`}>
+                  2
+                </span>
               </button>
             </div>
           </div>
@@ -140,10 +162,10 @@ export function Events() {
                     <Icon className="text-white h-5 w-5 sm:h-6 sm:w-6" />
                   </div>
 
-                  <h3 className="text-xl sm:text-2xl font-bold text-slate-900 mb-2 sm:mb-3 relative z-10 group-hover:text-blue-600 transition-colors">
+                  <h3 className="text-xl sm:text-2xl font-bold text-slate-900 mb-2 relative z-10 group-hover:text-blue-600 transition-colors">
                     {event.title}
                   </h3>
-                  <p className="text-sm sm:text-base text-slate-600 mb-5 sm:mb-6 leading-relaxed relative z-10">
+                  <p className="text-sm sm:text-base text-slate-600 mb-6 leading-relaxed relative z-10">
                     {event.description}
                   </p>
 

@@ -6,7 +6,14 @@ import { Users, PhoneCall, Bus } from "lucide-react";
 export function TeamAndContact() {
   return (
     <section id="contact" className="w-full py-16 md:py-24 bg-slate-900 text-slate-100 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
+      {/* Self-contained procedural background texture (zero external network requests) */}
+      <div 
+        className="absolute inset-0 opacity-15 mix-blend-overlay pointer-events-none" 
+        style={{
+          backgroundImage: `radial-gradient(circle at 50% 50%, rgba(255,255,255,0.06) 1px, transparent 1px)`,
+          backgroundSize: "24px 24px"
+        }}
+      />
 
       {/* Ambient background glows */}
       <div className="absolute top-1/3 -left-32 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
@@ -37,11 +44,11 @@ export function TeamAndContact() {
                 viewport={{ once: true, margin: "-50px" }}
                 transition={{ duration: 0.4 }}
                 whileHover={{ y: -4, borderColor: "rgba(59, 130, 246, 0.6)" }}
-                className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/80 p-5 sm:p-6 rounded-2xl shadow-lg transition-all"
+                className="bg-slate-800/60 backdrop-blur-sm border border-slate-700/80 p-5 sm:p-6 rounded-2xl shadow-lg transition-all"
               >
                 <p className="text-blue-400 font-semibold mb-1 text-xs sm:text-sm uppercase tracking-wider">Convener</p>
                 <p className="text-lg sm:text-xl font-bold text-white">Dr. Suja A. Alex</p>
-                <p className="text-slate-400 text-sm sm:text-base">Associate Professor &amp; Hod-IT</p>
+                <p className="text-slate-300 text-sm sm:text-base">Associate Professor &amp; Hod-IT</p>
               </motion.div>
 
               <motion.div
@@ -50,11 +57,11 @@ export function TeamAndContact() {
                 viewport={{ once: true, margin: "-50px" }}
                 transition={{ duration: 0.4, delay: 0.08 }}
                 whileHover={{ y: -4, borderColor: "rgba(20, 184, 166, 0.6)" }}
-                className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/80 p-5 sm:p-6 rounded-2xl shadow-lg transition-all"
+                className="bg-slate-800/60 backdrop-blur-sm border border-slate-700/80 p-5 sm:p-6 rounded-2xl shadow-lg transition-all"
               >
                 <p className="text-teal-400 font-semibold mb-1 text-xs sm:text-sm uppercase tracking-wider">Faculty Advisor-BRIGITZ</p>
                 <p className="text-lg sm:text-xl font-bold text-white">Er. P. Agnes Alex Rathy</p>
-                <p className="text-slate-400 text-sm sm:text-base">Assistant Professor-IT</p>
+                <p className="text-slate-300 text-sm sm:text-base">Assistant Professor-IT</p>
               </motion.div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
@@ -64,11 +71,11 @@ export function TeamAndContact() {
                   viewport={{ once: true, margin: "-50px" }}
                   transition={{ duration: 0.4, delay: 0.12 }}
                   whileHover={{ y: -4, borderColor: "rgba(168, 85, 247, 0.6)" }}
-                  className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/80 p-5 sm:p-6 rounded-2xl shadow-lg transition-all"
+                  className="bg-slate-800/60 backdrop-blur-sm border border-slate-700/80 p-5 sm:p-6 rounded-2xl shadow-lg transition-all"
                 >
                   <p className="text-purple-400 font-semibold mb-1 text-xs sm:text-sm uppercase tracking-wider">Secretary</p>
                   <p className="text-base sm:text-lg font-bold text-white">Mr. A. Altrin Benser</p>
-                  <p className="text-slate-400 text-xs sm:text-sm">Final Year-IT</p>
+                  <p className="text-slate-300 text-xs sm:text-sm">Final Year-IT</p>
                 </motion.div>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -76,11 +83,11 @@ export function TeamAndContact() {
                   viewport={{ once: true, margin: "-50px" }}
                   transition={{ duration: 0.4, delay: 0.16 }}
                   whileHover={{ y: -4, borderColor: "rgba(244, 63, 94, 0.6)" }}
-                  className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/80 p-5 sm:p-6 rounded-2xl shadow-lg transition-all"
+                  className="bg-slate-800/60 backdrop-blur-sm border border-slate-700/80 p-5 sm:p-6 rounded-2xl shadow-lg transition-all"
                 >
                   <p className="text-rose-400 font-semibold mb-1 text-xs sm:text-sm uppercase tracking-wider">Treasurer</p>
                   <p className="text-base sm:text-lg font-bold text-white">Ms. C. S. Absara</p>
-                  <p className="text-slate-400 text-xs sm:text-sm">Final Year-IT</p>
+                  <p className="text-slate-300 text-xs sm:text-sm">Final Year-IT</p>
                 </motion.div>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -88,11 +95,11 @@ export function TeamAndContact() {
                   viewport={{ once: true, margin: "-50px" }}
                   transition={{ duration: 0.4, delay: 0.2 }}
                   whileHover={{ y: -4, borderColor: "rgba(99, 102, 241, 0.6)" }}
-                  className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/80 p-5 sm:p-6 rounded-2xl shadow-lg transition-all"
+                  className="bg-slate-800/60 backdrop-blur-sm border border-slate-700/80 p-5 sm:p-6 rounded-2xl shadow-lg transition-all"
                 >
                   <p className="text-indigo-400 font-semibold mb-1 text-xs sm:text-sm uppercase tracking-wider">Joint Secretary</p>
                   <p className="text-base sm:text-lg font-bold text-white">Mr. P. K. Haris Aniruth</p>
-                  <p className="text-slate-400 text-xs sm:text-sm">Third Year - IT</p>
+                  <p className="text-slate-300 text-xs sm:text-sm">Third Year - IT</p>
                 </motion.div>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -100,11 +107,11 @@ export function TeamAndContact() {
                   viewport={{ once: true, margin: "-50px" }}
                   transition={{ duration: 0.4, delay: 0.24 }}
                   whileHover={{ y: -4, borderColor: "rgba(236, 72, 153, 0.6)" }}
-                  className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/80 p-5 sm:p-6 rounded-2xl shadow-lg transition-all"
+                  className="bg-slate-800/60 backdrop-blur-sm border border-slate-700/80 p-5 sm:p-6 rounded-2xl shadow-lg transition-all"
                 >
                   <p className="text-pink-400 font-semibold mb-1 text-xs sm:text-sm uppercase tracking-wider">Joint Treasurer</p>
                   <p className="text-base sm:text-lg font-bold text-white">Ms. S. S. Shernika</p>
-                  <p className="text-slate-400 text-xs sm:text-sm">Third Year - IT</p>
+                  <p className="text-slate-300 text-xs sm:text-sm">Third Year - IT</p>
                 </motion.div>
               </div>
             </div>

@@ -100,7 +100,7 @@ export function Countdown() {
                       {isCompleted ? "00" : block.value.toString().padStart(2, '0')}
                     </span>
                   </div>
-                  <span className="text-[9px] sm:text-xs font-bold text-slate-500 tracking-wider text-center">{block.label}</span>
+                  <span className="text-[9px] sm:text-xs font-bold text-slate-700 tracking-wider text-center">{block.label}</span>
                 </motion.div>
               ))}
             </div>

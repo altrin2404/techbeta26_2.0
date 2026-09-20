@@ -34,7 +34,7 @@ export function Schedule() {
           <h2 className="text-3xl md:text-5xl font-bold text-slate-900 mb-4 tracking-tight" style={{ fontFamily: "var(--font-orbitron)" }}>
             Event Schedule
           </h2>
-          <p className="text-base sm:text-lg text-slate-500">
+          <p className="text-base sm:text-lg text-slate-700">
             Plan your day ahead. Arrive by 9:00 AM at the Conference Hall, St. Xavier&apos;s Catholic College of Engineering, Nagercoil.
           </p>
         </motion.div>

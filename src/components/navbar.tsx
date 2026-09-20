@@ -90,13 +90,13 @@ export function Navbar() {
             </span>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-1 bg-slate-100/50 p-1 rounded-full border border-slate-200/50">
+          <nav className="hidden md:flex items-center gap-1 bg-slate-100/70 p-1 rounded-full border border-slate-200/70">
             {navLinks.map((item) => (
               <Link
                 key={item.name}
                 href={item.href}
                 onClick={(e) => handleScroll(e, item.href)}
-                className="px-4 py-2 rounded-full text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-white hover:shadow-sm transition-all"
+                className="px-4 py-2 rounded-full text-sm font-semibold text-slate-700 hover:text-slate-950 hover:bg-white hover:shadow-sm transition-all"
               >
                 {item.name}
               </Link>
@@ -115,7 +115,8 @@ export function Navbar() {
 
             <button
               onClick={() => setIsMobileMenuOpen(true)}
-              className="md:hidden flex items-center justify-center p-2 rounded-full text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors bg-slate-50 border border-slate-200"
+              aria-label="Open navigation menu"
+              className="md:hidden flex items-center justify-center p-2 rounded-full text-slate-700 hover:bg-slate-100 hover:text-slate-950 transition-colors bg-slate-50 border border-slate-200 cursor-pointer"
             >
               <Menu className="h-5 w-5" />
             </button>
@@ -143,7 +144,8 @@ export function Navbar() {
               </span>
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="p-2.5 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                aria-label="Close navigation menu"
+                className="p-2.5 rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
               >
                 <X className="h-6 w-6" />
               </button>

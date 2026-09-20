@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 
 export function PageLoader() {
   const [visible, setVisible] = useState(true);
@@ -89,11 +90,13 @@ export function PageLoader() {
                   <div className="absolute inset-0 rounded-full border-b-2 border-purple-400" />
                 </motion.div>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src="/img/brigitz-logo.png"
-                    alt="Brigitz Logo"
+                    alt="Brigitz Information Technology Association animated emblem"
+                    width={96}
+                    height={96}
                     className="w-24 h-24 object-contain rounded-full"
+                    priority
                   />
                 </div>
               </div>

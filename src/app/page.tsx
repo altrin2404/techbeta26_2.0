@@ -92,8 +92,8 @@ export default function Home() {
             <div className="flex items-center justify-center gap-2 sm:gap-4 mb-1 w-full max-w-4xl">
               <div className="hidden sm:block h-px bg-purple-500/30 flex-grow max-w-[100px] md:max-w-[200px]"></div>
               <h2
-                className="text-purple-600/90 font-medium uppercase tracking-wider text-xs sm:text-sm md:text-xl lg:text-2xl text-center leading-snug"
-                style={{ fontFamily: "var(--font-orbitron)", fontWeight: 500 }}
+                className="text-purple-800 font-semibold uppercase tracking-wider text-xs sm:text-sm md:text-xl lg:text-2xl text-center leading-snug"
+                style={{ fontFamily: "var(--font-orbitron)" }}
               >
                 DEPARTMENT OF INFORMATION TECHNOLOGY
               </h2>
@@ -102,15 +102,15 @@ export default function Home() {
 
             {/* Organises */}
             <p
-              className="text-purple-500/80 font-normal uppercase tracking-[0.3em] text-[10px] sm:text-xs md:text-sm mb-1"
-              style={{ fontFamily: "var(--font-orbitron)", fontWeight: 400 }}
+              className="text-purple-800 font-medium uppercase tracking-[0.3em] text-[10px] sm:text-xs md:text-sm mb-1"
+              style={{ fontFamily: "var(--font-orbitron)" }}
             >
               ORGANISES
             </p>
 
             {/* Symposium text */}
             <h3
-              className="text-slate-600 font-bold uppercase tracking-[0.15em] text-[10px] sm:text-xs md:text-sm mb-2"
+              className="text-slate-700 font-bold uppercase tracking-[0.15em] text-[10px] sm:text-xs md:text-sm mb-2"
               style={{ fontFamily: "var(--font-orbitron)", fontWeight: 700 }}
             >
               A NATIONAL LEVEL TECHNICAL SYMPOSIUM
@@ -122,12 +122,12 @@ export default function Home() {
               style={{ fontFamily: "var(--font-orbitron)" }}
             >
               <span style={{ fontFamily: "var(--font-orbitron)" }}>TechBETA</span>{" "}
-              <span className="text-blue-600" style={{ fontFamily: "var(--font-orbitron)" }}>2026 2.0</span>
+              <span className="text-blue-700" style={{ fontFamily: "var(--font-orbitron)" }}>2026 2.0</span>
             </h1>
 
             {/* Brigitz Slogan */}
             <h3
-              className="text-blue-600 font-bold tracking-widest text-xs sm:text-sm md:text-base lg:text-lg uppercase px-2"
+              className="text-blue-700 font-bold tracking-widest text-xs sm:text-sm md:text-base lg:text-lg uppercase px-2"
               style={{ fontFamily: "var(--font-orbitron)" }}
             >
               BRIGITZ Empowering Technical Aspects
@@ -140,22 +140,22 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
           >
-            <div className="flex items-center gap-3 text-slate-700 bg-white px-4 sm:px-5 py-3 rounded-2xl shadow-md border border-slate-200/60 w-full sm:w-auto justify-center text-left">
-              <CalendarDays className="h-5 w-5 text-blue-600 shrink-0" />
+            <div className="flex items-center gap-3 text-slate-800 bg-white px-4 sm:px-5 py-3 rounded-2xl shadow-md border border-slate-200/80 w-full sm:w-auto justify-center text-left">
+              <CalendarDays className="h-5 w-5 text-blue-700 shrink-0" />
               <div className="text-left">
-                <span className="font-semibold text-xs sm:text-sm md:text-base text-slate-800 block leading-tight whitespace-nowrap">
+                <span className="font-semibold text-xs sm:text-sm md:text-base text-slate-900 block leading-tight whitespace-nowrap">
                   October 13, 2026
                 </span>
-                <span className="text-[11px] sm:text-xs md:text-sm text-slate-600 block leading-tight mt-0.5 whitespace-nowrap">
+                <span className="text-[11px] sm:text-xs md:text-sm text-slate-700 block leading-tight mt-0.5 whitespace-nowrap">
                   9:00 AM
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-3 text-slate-700 bg-white px-4 sm:px-5 py-3 rounded-2xl shadow-md border border-slate-200/60 w-full sm:w-auto justify-center text-left">
-              <MapPin className="h-5 w-5 text-teal-600 shrink-0" />
+            <div className="flex items-center gap-3 text-slate-800 bg-white px-4 sm:px-5 py-3 rounded-2xl shadow-md border border-slate-200/80 w-full sm:w-auto justify-center text-left">
+              <MapPin className="h-5 w-5 text-teal-700 shrink-0" />
               <div className="text-left">
-                <span className="font-semibold text-xs sm:text-sm md:text-base text-slate-800 block leading-tight">Conference Hall</span>
-                <span className="text-[11px] sm:text-xs md:text-sm text-slate-600 block leading-tight mt-0.5">St. Xavier&apos;s Catholic College of Engineering, Nagercoil</span>
+                <span className="font-semibold text-xs sm:text-sm md:text-base text-slate-900 block leading-tight">Conference Hall</span>
+                <span className="text-[11px] sm:text-xs md:text-sm text-slate-700 block leading-tight mt-0.5">St. Xavier&apos;s Catholic College of Engineering, Nagercoil</span>
               </div>
             </div>
           </motion.div>
