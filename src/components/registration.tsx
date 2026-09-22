@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
+import NextImage from "next/image";
 import {
   CheckCircle2,
   AlertCircle,
@@ -417,7 +417,7 @@ export function Registration() {
       img.src = dataUrl;
       await new Promise<void>((resolve, reject) => {
         img.onload = () => resolve();
-        img.onerror = (e) => reject(e);
+        img.onerror = (e: any) => reject(e);
       });
 
       const pdf = new jsPDF({
@@ -750,7 +750,7 @@ export function Registration() {
                           {/* QR Code */}
                           <div className="flex-shrink-0 flex flex-col items-center mx-auto sm:mx-0">
                             <div className="p-2.5 bg-white rounded-2xl border-2 border-slate-900 shadow-md">
-                              <Image
+                              <NextImage
                                 src={
                                   qrDataUrl ||
                                   `https://api.qrserver.com/v1/create-qr-code/?size=140x140&color=0f172a&bgcolor=ffffff&qzone=2&data=${encodeURIComponent(
