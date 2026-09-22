@@ -32,15 +32,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Registration records not found for this order.' }, { status: 404 });
     }
 
-    // Update status to PAID
-    await prisma.registration.updateMany({
-      where: { razorpayOrderId: razorpay_order_id },
-      data: {
-        paymentStatus: 'PAID',
-        razorpayPaymentId: razorpay_payment_id,
-        razorpaySignature: razorpay_signature,
-      }
-    });
+    // Update status to PAID and assign participantId
+    await prisma.$transaction(
+      registrations.map((reg) =>
+        prisma.registration.update({
+          where: { id: reg.id },
+          data: {
+            paymentStatus: 'PAID',
+            razorpayPaymentId: razorpay_payment_id,
+            razorpaySignature: razorpay_signature,
+            participantId: reg.participantId || formatParticipantId(reg.participantNumber || 1),
+          },
+        })
+      )
+    );
 
     const updatedRecords = await prisma.registration.findMany({
       where: { razorpayOrderId: razorpay_order_id }

@@ -119,13 +119,7 @@ export async function POST(request: Request) {
           },
         });
 
-        const participantId = formatParticipantId(record.participantNumber || 1);
-        const updated = await tx.registration.update({
-          where: { id: record.id },
-          data: { participantId },
-        });
-
-        records.push(updated);
+        records.push(record);
       }
       return records;
     });
