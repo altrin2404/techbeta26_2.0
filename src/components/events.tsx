@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Terminal, PenTool, Cpu, Lightbulb, Megaphone, Search, Users, MapPin, Sparkles } from "lucide-react";
+import { Terminal, PenTool, Cpu, Lightbulb, Megaphone, Search, Users, MapPin, Sparkles, Clock, Info } from "lucide-react";
 import { useState } from "react";
 import { trackEvent } from "@/lib/analytics";
 
@@ -12,6 +12,7 @@ const technicalEvents = [
     icon: Terminal,
     color: "from-blue-500 to-indigo-600",
     format: "Individual",
+    time: "9:00 AM to 11:00 AM",
   },
   {
     title: "UI-VERSE",
@@ -19,6 +20,7 @@ const technicalEvents = [
     icon: PenTool,
     color: "from-purple-500 to-pink-500",
     format: "Individual",
+    time: "11:00 AM to 12:00 PM",
   },
   {
     title: "LOGIC TRAP",
@@ -26,6 +28,7 @@ const technicalEvents = [
     icon: Cpu,
     color: "from-emerald-500 to-teal-600",
     format: "Individual / Team of 2",
+    time: "9:00 AM to 12:00 PM",
   },
   {
     title: "IDEA FORGE",
@@ -33,6 +36,8 @@ const technicalEvents = [
     icon: Lightbulb,
     color: "from-amber-400 to-orange-500",
     format: "Individual / Team of 2",
+    time: "9:00 AM to 12:15 PM",
+    info: "Participants can complete their presentation and compete in any other technical event, provided the timings don't clash.",
   }
 ];
 
@@ -43,6 +48,7 @@ const nonTechnicalEvents = [
     icon: Megaphone,
     color: "from-rose-500 to-red-600",
     format: "Individual / Team of 2",
+    time: "1:00 PM to 1:45 PM",
   },
   {
     title: "BID & BUILD",
@@ -50,6 +56,7 @@ const nonTechnicalEvents = [
     icon: Search,
     color: "from-cyan-500 to-blue-500",
     format: "Individual / Team of 2",
+    time: "1:45 PM to 2:30 PM",
   }
 ];
 
@@ -169,12 +176,27 @@ export function Events() {
                     {event.description}
                   </p>
 
-                  <div className="flex flex-wrap items-center gap-2.5 pt-4 border-t border-slate-100 relative z-10">
-                    <div className="flex items-center text-xs sm:text-sm font-medium text-slate-700 bg-slate-50 group-hover:bg-blue-50/50 px-3 py-1.5 rounded-lg border border-slate-100 transition-colors">
-                      <Users className="h-4 w-4 mr-1.5 text-slate-500 group-hover:text-blue-600 transition-colors" />
-                      {event.format}
+                  {/* @ts-ignore */}
+                  {event.info && (
+                    <div className="mb-6 bg-blue-50/80 border border-blue-200 p-3 rounded-xl flex items-start gap-2 relative z-10">
+                      <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+                      <p className="text-xs text-blue-800 font-medium leading-relaxed">
+                        {/* @ts-ignore */}
+                        {event.info}
+                      </p>
                     </div>
-                  </div>
+                  )}
+
+                    <div className="flex flex-wrap items-center gap-2.5 pt-4 border-t border-slate-100 relative z-10">
+                      <div className="flex items-center text-xs sm:text-sm font-medium text-slate-700 bg-slate-50 group-hover:bg-blue-50/50 px-3 py-1.5 rounded-lg border border-slate-100 transition-colors">
+                        <Users className="h-4 w-4 mr-1.5 text-slate-500 group-hover:text-blue-600 transition-colors" />
+                        {event.format}
+                      </div>
+                      <div className="flex items-center text-xs sm:text-sm font-medium text-slate-700 bg-slate-50 group-hover:bg-blue-50/50 px-3 py-1.5 rounded-lg border border-slate-100 transition-colors">
+                        <Clock className="h-4 w-4 mr-1.5 text-slate-500 group-hover:text-blue-600 transition-colors" />
+                        {event.time}
+                      </div>
+                    </div>
                 </motion.div>
               );
             })}

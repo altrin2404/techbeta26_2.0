@@ -11,7 +11,7 @@ const faqs = [
   },
   {
     q: "Is there a registration fee?",
-    a: "The registration fee is ₹200 per participant, which includes lunch. This is available through online registration only."
+    a: "The registration fee is ₹250 per participant, which includes lunch. This is available through online registration only."
   },
   {
     q: "Is lunch provided during the event?",

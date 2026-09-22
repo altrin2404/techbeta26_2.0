@@ -58,7 +58,7 @@ export async function POST(request: Request) {
     }
 
     // 1. Create Razorpay Order
-    const amountPerPerson = 250;
+    const amountPerPerson = 1;
     const totalAmount = memberList.length * amountPerPerson;
     const amountInPaise = totalAmount * 100;
     

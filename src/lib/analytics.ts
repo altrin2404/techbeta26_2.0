@@ -71,10 +71,7 @@ export function trackEvent(
   if (typeof window.gtag === "function") {
     window.gtag("event", eventName, params);
   } else {
-    // Development / fallback logging
-    if (process.env.NODE_ENV !== "production") {
-      console.log(`[Analytics Event] ${eventName}:`, params);
-    }
+    // Removed development logging per user request
   }
 }
 
