@@ -34,6 +34,7 @@ import {
   Star,
   MapPin,
   Clock,
+  ShieldCheck,
 } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 
@@ -46,6 +47,7 @@ export interface Participant {
   college: string;
   technicalEvents: string[];
   nonTechnicalEvents: string[];
+  isParticipatingAsTeam?: boolean;
 }
 
 const TECHNICAL_EVENTS = [
@@ -83,11 +85,11 @@ const createEmptyParticipant = (defaultCollege = ""): Participant => ({
   college: defaultCollege,
   technicalEvents: [],
   nonTechnicalEvents: [],
+  isParticipatingAsTeam: false,
 });
 
 export function Registration() {
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
-  const [teamName, setTeamName] = useState("");
   const [members, setMembers] = useState<Participant[]>([createEmptyParticipant()]);
   const [paymentUtr, setPaymentUtr] = useState("");
   const [copiedUpi, setCopiedUpi] = useState(false);
@@ -104,16 +106,16 @@ export function Registration() {
   const ticketRef = useRef<HTMLDivElement>(null);
 
   const UPI_ID = "techbeta2k26@sbi";
-  const FEE_PER_PERSON = 200;
+  const FEE_PER_PERSON = 250;
   const totalAmount = members.length * FEE_PER_PERSON;
 
   const [forceShowTeamName, setForceShowTeamName] = useState(false);
+  
   const isTeamCompetitionChosen = members.some((m) =>
     m.technicalEvents.some((t) => t.toLowerCase().includes("logic trap") || t.toLowerCase().includes("idea forge") || t.toLowerCase().includes("team")) ||
     m.nonTechnicalEvents.some((n) => n.toLowerCase().includes("brand blitz") || n.toLowerCase().includes("bid & build") || n.toLowerCase().includes("bid and build") || n.toLowerCase().includes("team"))
   );
-  const showTeamName = members.length > 1 || isTeamCompetitionChosen || forceShowTeamName || Boolean(teamName);
-
+  
   const validateSingleField = (fieldKey: string, value: string): string => {
     if (fieldKey.endsWith("-name")) {
       if (!value.trim()) return "Full name is required";
@@ -143,12 +145,6 @@ export function Registration() {
     }
     if (fieldKey.endsWith("-college")) {
       if (!value.trim()) return "College name is required";
-      return "";
-    }
-    if (fieldKey === "utr") {
-      if (!value.trim()) return "UPI Transaction Reference ID / UTR is required";
-      if (value.trim().length < 10) return "UTR must be at least 10-12 characters";
-      if (!/^[A-Za-z0-9]+$/.test(value.trim())) return "UTR should only contain letters and numbers without spaces";
       return "";
     }
     return "";
@@ -463,19 +459,19 @@ export function Registration() {
     }
   };
 
+  const loadRazorpay = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
-
-    const utrError = validateSingleField("utr", paymentUtr);
-    setTouchedFields((prev) => ({ ...prev, utr: true }));
-    if (utrError) {
-      setFieldErrors((prev) => ({ ...prev, utr: utrError }));
-      setErrorMessage(utrError);
-      document.getElementById("utr")?.focus();
-      return;
-    }
-
     setStatus("loading");
     trackEvent("registration_attempt", {
       memberCount: members.length,
@@ -483,42 +479,92 @@ export function Registration() {
     });
 
     try {
-      const res = await fetch("/api/register", {
+      const bodyTeamName = members.find(m => m.teamName?.trim())?.teamName?.trim() || undefined;
+
+      const res = await fetch("/api/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          teamName: teamName.trim() || undefined,
+          teamName: bodyTeamName,
           members,
-          paymentUtr: paymentUtr.trim(),
         }),
       });
 
-      const data = await res.json();
-
+      const orderData = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Registration failed. Please try again.");
+        throw new Error(orderData.error || "Failed to initialize order.");
       }
 
-      const confirmedId = data.id || data.teamId || "TB26-CONFIRMED";
-      setRegId(confirmedId);
+      const resLoad = await loadRazorpay();
+      if (!resLoad) {
+        throw new Error("Failed to load Razorpay SDK. Check your connection.");
+      }
 
-      const pIdMap: Record<number, string> = {};
-      if (Array.isArray(data.members)) {
-        data.members.forEach((m: { participantId?: string }, idx: number) => {
-          if (m.participantId) {
-            pIdMap[idx] = m.participantId;
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "TechBETA 2026",
+        description: "Symposium Registration",
+        order_id: orderData.orderId,
+        handler: async function (response: any) {
+          try {
+            setStatus("loading");
+            const verifyRes = await fetch("/api/register", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }),
+            });
+
+            const verifyData = await verifyRes.json();
+            if (!verifyRes.ok) throw new Error(verifyData.error || "Payment verification failed");
+
+            const confirmedId = verifyData.id || verifyData.teamId || "TB26-CONFIRMED";
+            setRegId(confirmedId);
+
+            const pIdMap: Record<number, string> = {};
+            if (Array.isArray(verifyData.members)) {
+              verifyData.members.forEach((m: { participantId?: string }, idx: number) => {
+                if (m.participantId) {
+                  pIdMap[idx] = m.participantId;
+                }
+              });
+            }
+            setParticipantIds(pIdMap);
+            setPrimaryParticipantId(verifyData.primaryParticipantId || pIdMap[0] || "TB001");
+
+            setStatus("success");
+            trackEvent("registration_success", {
+              teamId: confirmedId,
+              participantId: verifyData.primaryParticipantId || pIdMap[0] || "TB001",
+              memberCount: members.length,
+            });
+          } catch (verifyErr: any) {
+            setErrorMessage(verifyErr.message || "Payment verification failed.");
+            setStatus("error");
           }
-        });
-      }
-      setParticipantIds(pIdMap);
-      setPrimaryParticipantId(data.primaryParticipantId || pIdMap[0] || "TB001");
+        },
+        prefill: {
+          name: members[0].name,
+          email: members[0].email,
+          contact: members[0].phone,
+        },
+        theme: {
+          color: "#2563EB",
+        },
+      };
 
-      setStatus("success");
-      trackEvent("registration_success", {
-        teamId: confirmedId,
-        participantId: data.primaryParticipantId || pIdMap[0] || "TB001",
-        memberCount: members.length,
+      // @ts-ignore
+      const paymentObject = new window.Razorpay(options);
+      paymentObject.on("payment.failed", function (response: any) {
+        setErrorMessage("Payment failed. Please try again.");
+        setStatus("error");
       });
+      paymentObject.open();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "An unexpected error occurred.";
       setErrorMessage(message);
@@ -747,70 +793,70 @@ export function Registration() {
                                     </div>
                                   </div>
 
-                                {/* Name */}
-                                <div className="mb-2">
-                                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block">
-                                    Name
-                                  </span>
-                                  <p className="text-lg sm:text-xl font-black text-slate-950 leading-tight">
-                                    {m.name}
-                                  </p>
-                                </div>
+                                  {/* Name */}
+                                  <div className="mb-2">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block">
+                                      Name
+                                    </span>
+                                    <p className="text-lg sm:text-xl font-black text-slate-950 leading-tight">
+                                      {m.name}
+                                    </p>
+                                  </div>
 
-                                {/* College Name */}
-                                <div className="mb-2.5">
-                                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block">
-                                    College Name
-                                  </span>
-                                  <p className="text-xs sm:text-sm font-bold text-slate-800 leading-snug">
-                                    {m.college || "St. Xavier's Catholic College of Engineering, Nagercoil"}
-                                  </p>
-                                </div>
+                                  {/* College Name */}
+                                  <div className="mb-2.5">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block">
+                                      College Name
+                                    </span>
+                                    <p className="text-xs sm:text-sm font-bold text-slate-800 leading-snug">
+                                      {m.college || "St. Xavier's Catholic College of Engineering, Nagercoil"}
+                                    </p>
+                                  </div>
 
-                                {/* Technical Events */}
-                                <div className="mb-2.5">
-                                  <span className="text-[11px] font-extrabold uppercase tracking-wide text-blue-950 block mb-1">
-                                    Technical Events:
-                                  </span>
-                                  {m.technicalEvents.length > 0 ? (
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {m.technicalEvents.map((ev) => (
-                                        <span
-                                          key={ev}
-                                          className="px-2.5 py-1 bg-blue-100 text-blue-950 text-xs font-bold rounded-lg border border-blue-300 shadow-xs"
-                                        >
-                                          {ev}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    <p className="text-xs font-medium text-slate-500 italic">None selected</p>
-                                  )}
-                                </div>
+                                  {/* Technical Events */}
+                                  <div className="mb-2.5">
+                                    <span className="text-[11px] font-extrabold uppercase tracking-wide text-blue-950 block mb-1">
+                                      Technical Events:
+                                    </span>
+                                    {m.technicalEvents.length > 0 ? (
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {m.technicalEvents.map((ev) => (
+                                          <span
+                                            key={ev}
+                                            className="px-2.5 py-1 bg-blue-100 text-blue-950 text-xs font-bold rounded-lg border border-blue-300 shadow-xs"
+                                          >
+                                            {ev}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <p className="text-xs font-medium text-slate-500 italic">None selected</p>
+                                    )}
+                                  </div>
 
-                                {/* Non-Technical Events */}
-                                <div>
-                                  <span className="text-[11px] font-extrabold uppercase tracking-wide text-purple-950 block mb-1">
-                                    Non-Technical Events:
-                                  </span>
-                                  {m.nonTechnicalEvents.length > 0 ? (
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {m.nonTechnicalEvents.map((ev) => (
-                                        <span
-                                          key={ev}
-                                          className="px-2.5 py-1 bg-purple-100 text-purple-950 text-xs font-bold rounded-lg border border-purple-300 shadow-xs"
-                                        >
-                                          {ev}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    <p className="text-xs font-medium text-slate-500 italic">None selected</p>
-                                  )}
+                                  {/* Non-Technical Events */}
+                                  <div>
+                                    <span className="text-[11px] font-extrabold uppercase tracking-wide text-purple-950 block mb-1">
+                                      Non-Technical Events:
+                                    </span>
+                                    {m.nonTechnicalEvents.length > 0 ? (
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {m.nonTechnicalEvents.map((ev) => (
+                                          <span
+                                            key={ev}
+                                            className="px-2.5 py-1 bg-purple-100 text-purple-950 text-xs font-bold rounded-lg border border-purple-300 shadow-xs"
+                                          >
+                                            {ev}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <p className="text-xs font-medium text-slate-500 italic">None selected</p>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
                           </div>
                         </div>
 
@@ -980,40 +1026,7 @@ export function Registration() {
                   </div>
                 )}
 
-                {/* Team Name (Prompted if team competition is chosen or multi-member team) */}
-                {showTeamName ? (
-                  <div className="p-4 sm:p-5 bg-gradient-to-r from-blue-50/90 to-indigo-50/70 rounded-2xl border-2 border-blue-200/90 shadow-xs mb-6 transition-all animate-fadeIn">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
-                      <label htmlFor="teamName" className="block text-xs font-black text-blue-950 uppercase tracking-wider">
-                        Team Name {isTeamCompetitionChosen || members.length > 1 ? "(Team Competition)" : "(Optional)"}
-                      </label>
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 w-fit">
-                        {isTeamCompetitionChosen ? "Team Competition Chosen" : "Multi-Member Team"}
-                      </span>
-                    </div>
-                    <input
-                      id="teamName"
-                      type="text"
-                      value={teamName}
-                      onChange={(e) => setTeamName(e.target.value)}
-                      placeholder="e.g. Code Knights, Byte Busters, Innovators..."
-                      className="w-full h-11 px-4 rounded-xl border border-blue-300 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-medium shadow-xs"
-                    />
-                    <p className="text-[11px] text-slate-600 mt-1.5">
-                      This team name will appear on official judging rosters, attendance sheets, and certificates.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex justify-end mb-2">
-                    <button
-                      type="button"
-                      onClick={() => setForceShowTeamName(true)}
-                      className="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1 transition-all"
-                    >
-                      <span>+ Register with a Team Name</span>
-                    </button>
-                  </div>
-                )}
+
 
                 {/* Members List */}
                 <div className="space-y-8">
@@ -1075,10 +1088,10 @@ export function Registration() {
                             onBlur={() => handleFieldBlur(`member-${mIdx}-name`, member.name)}
                             placeholder="e.g. Altrin Benser"
                             className={`w-full h-11 px-3.5 rounded-xl border bg-white text-slate-900 placeholder:text-slate-500 placeholder:opacity-100 outline-none text-sm transition-all focus:ring-2 focus:ring-offset-1 ${fieldErrors[`member-${mIdx}-name`]
-                                ? "border-red-400 focus:ring-red-400 bg-red-50/20"
-                                : touchedFields[`member-${mIdx}-name`] && member.name
-                                  ? "border-green-500/70 focus:ring-green-500"
-                                  : "border-slate-300 focus:ring-blue-500"
+                              ? "border-red-400 focus:ring-red-400 bg-red-50/20"
+                              : touchedFields[`member-${mIdx}-name`] && member.name
+                                ? "border-green-500/70 focus:ring-green-500"
+                                : "border-slate-300 focus:ring-blue-500"
                               }`}
                           />
                           {fieldErrors[`member-${mIdx}-name`] && (
@@ -1111,10 +1124,10 @@ export function Registration() {
                             onBlur={() => handleFieldBlur(`member-${mIdx}-email`, member.email)}
                             placeholder="e.g. altrin@example.com"
                             className={`w-full h-11 px-3.5 rounded-xl border bg-white text-slate-900 placeholder:text-slate-500 placeholder:opacity-100 outline-none text-sm transition-all focus:ring-2 focus:ring-offset-1 ${fieldErrors[`member-${mIdx}-email`]
-                                ? "border-red-400 focus:ring-red-400 bg-red-50/20"
-                                : touchedFields[`member-${mIdx}-email`] && member.email
-                                  ? "border-green-500/70 focus:ring-green-500"
-                                  : "border-slate-300 focus:ring-blue-500"
+                              ? "border-red-400 focus:ring-red-400 bg-red-50/20"
+                              : touchedFields[`member-${mIdx}-email`] && member.email
+                                ? "border-green-500/70 focus:ring-green-500"
+                                : "border-slate-300 focus:ring-blue-500"
                               }`}
                           />
                           {fieldErrors[`member-${mIdx}-email`] && (
@@ -1148,10 +1161,10 @@ export function Registration() {
                             placeholder="e.g. 9876543210"
                             maxLength={10}
                             className={`w-full h-11 px-3.5 rounded-xl border bg-white text-slate-900 placeholder:text-slate-500 placeholder:opacity-100 outline-none text-sm transition-all focus:ring-2 focus:ring-offset-1 ${fieldErrors[`member-${mIdx}-phone`]
-                                ? "border-red-400 focus:ring-red-400 bg-red-50/20"
-                                : touchedFields[`member-${mIdx}-phone`] && member.phone.length === 10
-                                  ? "border-green-500/70 focus:ring-green-500"
-                                  : "border-slate-300 focus:ring-blue-500"
+                              ? "border-red-400 focus:ring-red-400 bg-red-50/20"
+                              : touchedFields[`member-${mIdx}-phone`] && member.phone.length === 10
+                                ? "border-green-500/70 focus:ring-green-500"
+                                : "border-slate-300 focus:ring-blue-500"
                               }`}
                           />
                           {fieldErrors[`member-${mIdx}-phone`] && (
@@ -1185,10 +1198,10 @@ export function Registration() {
                             onBlur={() => handleFieldBlur(`member-${mIdx}-department`, member.department)}
                             placeholder="e.g. Information Technology"
                             className={`w-full h-11 px-3.5 rounded-xl border bg-white text-slate-900 placeholder:text-slate-500 placeholder:opacity-100 outline-none text-sm transition-all focus:ring-2 focus:ring-offset-1 ${fieldErrors[`member-${mIdx}-department`]
-                                ? "border-red-400 focus:ring-red-400 bg-red-50/20"
-                                : touchedFields[`member-${mIdx}-department`] && member.department
-                                  ? "border-green-500/70 focus:ring-green-500"
-                                  : "border-slate-300 focus:ring-blue-500"
+                              ? "border-red-400 focus:ring-red-400 bg-red-50/20"
+                              : touchedFields[`member-${mIdx}-department`] && member.department
+                                ? "border-green-500/70 focus:ring-green-500"
+                                : "border-slate-300 focus:ring-blue-500"
                               }`}
                           />
                           <datalist id={`dept-list-${mIdx}`}>
@@ -1224,10 +1237,10 @@ export function Registration() {
                             onChange={(e) => updateMember(mIdx, "year", e.target.value)}
                             onBlur={() => handleFieldBlur(`member-${mIdx}-year`, member.year)}
                             className={`w-full h-11 px-3.5 rounded-xl border bg-white outline-none text-sm text-slate-900 font-medium transition-all focus:ring-2 focus:ring-offset-1 ${fieldErrors[`member-${mIdx}-year`]
-                                ? "border-red-400 focus:ring-red-400 bg-red-50/20"
-                                : touchedFields[`member-${mIdx}-year`] && member.year
-                                  ? "border-green-500/70 focus:ring-green-500"
-                                  : "border-slate-300 focus:ring-blue-500"
+                              ? "border-red-400 focus:ring-red-400 bg-red-50/20"
+                              : touchedFields[`member-${mIdx}-year`] && member.year
+                                ? "border-green-500/70 focus:ring-green-500"
+                                : "border-slate-300 focus:ring-blue-500"
                               }`}
                           >
                             <option value="">Select Year</option>
@@ -1267,10 +1280,10 @@ export function Registration() {
                             onBlur={() => handleFieldBlur(`member-${mIdx}-college`, member.college)}
                             placeholder="e.g. St. Xavier's Catholic College of Engineering"
                             className={`w-full h-11 px-3.5 rounded-xl border bg-white text-slate-900 placeholder:text-slate-500 placeholder:opacity-100 outline-none text-sm transition-all focus:ring-2 focus:ring-offset-1 ${fieldErrors[`member-${mIdx}-college`]
-                                ? "border-red-400 focus:ring-red-400 bg-red-50/20"
-                                : touchedFields[`member-${mIdx}-college`] && member.college
-                                  ? "border-green-500/70 focus:ring-green-500"
-                                  : "border-slate-300 focus:ring-blue-500"
+                              ? "border-red-400 focus:ring-red-400 bg-red-50/20"
+                              : touchedFields[`member-${mIdx}-college`] && member.college
+                                ? "border-green-500/70 focus:ring-green-500"
+                                : "border-slate-300 focus:ring-blue-500"
                               }`}
                           />
                           {fieldErrors[`member-${mIdx}-college`] && (
@@ -1416,30 +1429,91 @@ export function Registration() {
                             <span>{fieldErrors[`member-${mIdx}-events`]}</span>
                           </div>
                         )}
+
+                        {/* Individual / Team Selection per member */}
+                        {(member.technicalEvents.some((t) => t.toLowerCase().includes("logic trap") || t.toLowerCase().includes("idea forge") || t.toLowerCase().includes("team")) ||
+                          member.nonTechnicalEvents.some((n) => n.toLowerCase().includes("brand blitz") || n.toLowerCase().includes("bid & build") || n.toLowerCase().includes("bid and build") || n.toLowerCase().includes("team"))) && (
+                          <div className="mt-6 p-4 sm:p-5 bg-slate-50/80 rounded-2xl border border-slate-200 shadow-sm animate-fadeIn">
+                            <label className="block text-[13px] font-bold text-slate-900 mb-3 uppercase tracking-wide">
+                              You selected a Team Event. Are you participating as:
+                            </label>
+                            <div className="flex gap-6 mb-4">
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name={`participationMode-${mIdx}`} checked={!member.isParticipatingAsTeam} onChange={() => { updateMember(mIdx, "isParticipatingAsTeam", false); updateMember(mIdx, "teamName", ""); }} className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500" />
+                                <span className="text-sm text-slate-700 font-semibold">An Individual</span>
+                              </label>
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name={`participationMode-${mIdx}`} checked={!!member.isParticipatingAsTeam} onChange={() => updateMember(mIdx, "isParticipatingAsTeam", true)} className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500" />
+                                <span className="text-sm text-slate-700 font-semibold">A Team</span>
+                              </label>
+                            </div>
+
+                            {member.isParticipatingAsTeam && (
+                              <div className="pt-4 border-t border-slate-200 animate-fadeIn">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
+                                  <label htmlFor={`teamName-${mIdx}`} className="block text-xs font-black text-blue-950 uppercase tracking-wider">
+                                    Team Name (Team Competition)
+                                  </label>
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 w-fit">
+                                    Team Competition Chosen
+                                  </span>
+                                </div>
+                                <input
+                                  id={`teamName-${mIdx}`}
+                                  type="text"
+                                  value={member.teamName || ""}
+                                  onChange={(e) => updateMember(mIdx, "teamName", e.target.value)}
+                                  placeholder="e.g. Code Knights, Byte Busters, Innovators..."
+                                  className="w-full h-11 px-4 rounded-xl border border-blue-300 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-medium shadow-xs"
+                                />
+                                <div className="mt-3 flex items-start gap-2 bg-blue-100/80 border border-blue-300 p-2.5 rounded-lg">
+                                  <Info className="h-4 w-4 text-blue-700 shrink-0 mt-0.5" />
+                                  <p className="text-[12px] sm:text-[13px] font-black text-blue-900 leading-tight">
+                                    IMPORTANT: Please enter the EXACT SAME team name for both team members if registering as a team.
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
                 </div>
 
+
+
                 {/* Bottom Action Bar: Add Team Member & Proceed to Payment */}
                 <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <button
-                    type="button"
-                    onClick={handleAddMember}
-                    className="w-full sm:w-auto px-5 py-3 rounded-xl border-2 border-dashed border-blue-400 bg-blue-50/50 hover:bg-blue-50 text-blue-700 font-semibold text-sm flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    <UserPlus className="h-4 w-4" />
-                    Add Team Member
-                  </button>
+                  {members.length < 4 ? (
+                    <button
+                      type="button"
+                      onClick={handleAddMember}
+                      className="w-full sm:w-auto px-5 py-3 rounded-xl border-2 border-dashed border-blue-400 bg-blue-50/50 hover:bg-blue-50 text-blue-700 font-semibold text-sm flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      Add Team Member
+                    </button>
+                  ) : (
+                    <div className="text-sm font-semibold text-slate-500">
+                      Maximum 4 members allowed
+                    </div>
+                  )}
 
-                  <button
-                    type="button"
-                    onClick={handleProceedToPayment}
-                    className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-slate-900 text-white font-semibold text-sm sm:text-base hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-900/20 hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    <span>Proceed to Payment</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
+                  <div className="flex flex-col items-center gap-2.5 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={handleProceedToPayment}
+                      className="w-full px-7 py-3.5 rounded-xl bg-slate-900 text-white font-semibold text-sm sm:text-base hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-900/20 hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      <span>Proceed to Payment</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                    <div className="flex items-center justify-center gap-1.5 text-[11px] sm:text-xs font-semibold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-md border border-slate-200/80 shadow-sm w-full">
+                      <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                      <span>Secured with <span className="text-[#3395FF] font-bold">Razorpay</span></span>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             ) : (
@@ -1522,138 +1596,29 @@ export function Registration() {
                   </div>
                 </div>
 
-                {/* Official UPI QR & Payment Options */}
+                {/* Official Razorpay Checkout */}
                 <div className="bg-gradient-to-br from-blue-50/50 via-white to-indigo-50/40 rounded-2xl p-5 sm:p-7 border border-blue-200/80">
                   <div className="text-center mb-6">
                     <h4 className="text-base sm:text-lg font-bold text-slate-900 mb-1">
-                      Scan & Pay via any UPI App
+                      Pay Securely with Razorpay
                     </h4>
                     <p className="text-xs sm:text-sm text-slate-500">
-                      Google Pay • PhonePe • Paytm • BHIM • Any Bank UPI
+                      Supports UPI, Credit/Debit Cards, Net Banking & Wallets
                     </p>
                   </div>
 
-                  <div className="flex flex-col md:flex-row items-center justify-center gap-6 sm:gap-8 mb-6">
-                    {/* Visual QR Code Display */}
-                    <div className="relative p-3 bg-white rounded-2xl shadow-md border border-slate-200 flex flex-col items-center">
-                      <div className="w-44 h-44 bg-slate-900 rounded-xl p-2 flex items-center justify-center relative overflow-hidden">
-                        {/* Realistic High-contrast Stylized QR SVG representation */}
-                        <svg className="w-full h-full text-white" viewBox="0 0 100 100" fill="currentColor">
-                          {/* Corner Squares */}
-                          <rect x="5" y="5" width="28" height="28" fill="white" rx="3" />
-                          <rect x="9" y="9" width="20" height="20" fill="#0f172a" rx="2" />
-                          <rect x="13" y="13" width="12" height="12" fill="white" rx="1" />
-
-                          <rect x="67" y="5" width="28" height="28" fill="white" rx="3" />
-                          <rect x="71" y="9" width="20" height="20" fill="#0f172a" rx="2" />
-                          <rect x="75" y="13" width="12" height="12" fill="white" rx="1" />
-
-                          <rect x="5" y="67" width="28" height="28" fill="white" rx="3" />
-                          <rect x="9" y="71" width="20" height="20" fill="#0f172a" rx="2" />
-                          <rect x="13" y="75" width="12" height="12" fill="white" rx="1" />
-
-                          {/* Pattern Blocks */}
-                          <rect x="38" y="8" width="6" height="6" fill="white" />
-                          <rect x="48" y="8" width="6" height="6" fill="white" />
-                          <rect x="58" y="14" width="6" height="6" fill="white" />
-                          <rect x="38" y="24" width="12" height="6" fill="white" />
-                          <rect x="54" y="24" width="6" height="12" fill="white" />
-
-                          <rect x="8" y="38" width="6" height="12" fill="white" />
-                          <rect x="18" y="44" width="12" height="6" fill="white" />
-                          <rect x="24" y="54" width="6" height="8" fill="white" />
-
-                          <rect x="38" y="38" width="24" height="24" fill="#3b82f6" rx="4" />
-                          <text x="50" y="54" fill="white" fontSize="10" fontWeight="bold" textAnchor="middle">TB26</text>
-
-                          <rect x="68" y="38" width="8" height="14" fill="white" />
-                          <rect x="80" y="44" width="12" height="8" fill="white" />
-                          <rect x="72" y="58" width="18" height="6" fill="white" />
-
-                          <rect x="38" y="68" width="8" height="18" fill="white" />
-                          <rect x="50" y="74" width="16" height="6" fill="white" />
-                          <rect x="70" y="70" width="8" height="8" fill="white" />
-                          <rect x="82" y="78" width="12" height="14" fill="white" />
-                          <rect x="42" y="88" width="18" height="6" fill="white" />
-                        </svg>
-                      </div>
-                      <div className="mt-2 text-center">
-                        <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
-                          ₹{totalAmount}
-                        </span>
-                        <span className="text-[10px] text-slate-400">TechBETA 2026 2.0</span>
-                      </div>
-                    </div>
-
-                    {/* UPI Copy & Details */}
-                    <div className="flex-grow space-y-3 text-center md:text-left">
-                      <div>
-                        <p className="text-xs text-slate-500 font-medium">Official UPI ID</p>
-                        <div className="inline-flex items-center gap-2 mt-1 bg-white border border-slate-200 px-3.5 py-2 rounded-xl shadow-sm">
-                          <span className="font-mono text-xs sm:text-sm font-bold text-slate-900">{UPI_ID}</span>
-                          <button
-                            type="button"
-                            onClick={handleCopyUpi}
-                            className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors"
-                            title="Copy UPI ID"
-                          >
-                            {copiedUpi ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="text-xs text-slate-600 space-y-1">
-                        <p>1. Open your UPI App (GPay, PhonePe, Paytm, etc.).</p>
-                        <p>2. Scan the QR code or pay to <strong>{UPI_ID}</strong>.</p>
-                        <p>3. Pay exact amount: <strong className="text-slate-900">₹{totalAmount}</strong>.</p>
-                        <p>4. Enter the 12-digit <strong>UTR / Transaction Reference Number</strong> below.</p>
-                      </div>
+                  <div className="flex justify-center mb-4">
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
+                      <p className="text-sm font-medium text-slate-700 mb-2">Total Amount to Pay</p>
+                      <p className="text-3xl font-black text-slate-900">₹{totalAmount}</p>
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-blue-200/60">
-                    <div className="flex items-center justify-between mb-2">
-                      <label htmlFor="utr" className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
-                        UPI Transaction ID / UTR Number <span className="text-red-500">*</span>
-                      </label>
-                      {touchedFields["utr"] && !fieldErrors["utr"] && paymentUtr.length >= 10 && (
-                        <span className="text-[10px] text-green-600 font-semibold flex items-center gap-0.5">
-                          <Check className="h-3 w-3" /> Valid UTR
-                        </span>
-                      )}
-                    </div>
-                    <input
-                      id="utr"
-                      type="text"
-                      required
-                      value={paymentUtr}
-                      onChange={(e) => {
-                        const val = e.target.value.trim();
-                        setPaymentUtr(val);
-                        if (touchedFields["utr"]) {
-                          const err = validateSingleField("utr", val);
-                          setFieldErrors((prev) => ({ ...prev, utr: err }));
-                        }
-                      }}
-                      onBlur={() => handleFieldBlur("utr", paymentUtr)}
-                      placeholder="e.g. 427819873421 or T260911001"
-                      className={`w-full h-12 px-4 rounded-xl border bg-white text-slate-900 placeholder:text-slate-500 placeholder:opacity-100 outline-none text-sm font-mono font-medium transition-all ${fieldErrors["utr"]
-                          ? "border-red-400 focus:ring-2 focus:ring-red-400 bg-red-50/20"
-                          : touchedFields["utr"] && paymentUtr.length >= 10
-                            ? "border-green-500/80 focus:ring-2 focus:ring-green-500 bg-green-50/10"
-                            : "border-slate-300 focus:ring-2 focus:ring-blue-500"
-                        }`}
-                    />
-                    {fieldErrors["utr"] ? (
-                      <p className="text-[11px] text-red-600 font-medium mt-1.5 flex items-center gap-1">
-                        <AlertCircle className="h-3 w-3 shrink-0" />
-                        {fieldErrors["utr"]}
-                      </p>
-                    ) : (
-                      <p className="text-[11px] text-slate-600 mt-1">
-                        You can find the 12-digit UTR in your payment app receipt under &apos;UPI Ref ID&apos; or &apos;UTR&apos;.
-                      </p>
-                    )}
+                  <div className="text-center">
+                    <p className="text-xs text-slate-500 max-w-md mx-auto">
+                      Clicking &quot;Pay & Register&quot; below will open the secure Razorpay checkout.
+                      Once payment is successful, your registration will be confirmed automatically.
+                    </p>
                   </div>
                 </div>
 
@@ -1674,8 +1639,8 @@ export function Registration() {
                     disabled={status === "loading"}
                     className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-slate-900 text-white font-semibold text-sm sm:text-base hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-900/20 disabled:opacity-70 disabled:cursor-not-allowed"
                   >
-                    {status === "loading" && <Loader2 className="h-4 w-4 animate-spin" />}
-                    Confirm & Complete Registration
+                    {status === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                    Pay ₹{totalAmount} & Register
                   </button>
                 </div>
               </motion.form>

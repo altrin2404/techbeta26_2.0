@@ -54,8 +54,8 @@ export function Countdown() {
   return (
     <section className="w-full py-16 md:py-24 bg-gradient-to-b from-[#f8fafe] via-white to-[#f8fafe] relative overflow-hidden">
       {/* Background ambient lighting */}
-      <div className="absolute top-1/2 -left-28 -translate-y-1/2 w-80 h-80 bg-blue-200/30 rounded-full blur-3xl pointer-events-none animate-pulse-glow" />
-      <div className="absolute top-1/2 -right-28 -translate-y-1/2 w-80 h-80 bg-purple-200/20 rounded-full blur-3xl pointer-events-none animate-pulse-glow" />
+      <div className="hidden md:block absolute top-1/2 -left-28 -translate-y-1/2 w-80 h-80 bg-blue-200/30 rounded-full blur-3xl pointer-events-none animate-pulse-glow" />
+      <div className="hidden md:block absolute top-1/2 -right-28 -translate-y-1/2 w-80 h-80 bg-purple-200/20 rounded-full blur-3xl pointer-events-none animate-pulse-glow" />
 
       <div className="container mx-auto px-4 max-w-6xl relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">

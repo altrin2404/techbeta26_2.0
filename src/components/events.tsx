@@ -59,9 +59,9 @@ export function Events() {
 
   return (
     <section id="events" className="w-full py-16 md:py-24 bg-white relative overflow-hidden">
-      {/* Subtle background ambient blur */}
-      <div className="absolute top-1/3 -left-32 w-80 h-80 bg-blue-100/40 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-10 -right-32 w-80 h-80 bg-purple-100/40 rounded-full blur-3xl pointer-events-none" />
+      {/* Subtle background ambient blur (Hidden on mobile for performance) */}
+      <div className="hidden md:block absolute top-1/3 -left-32 w-80 h-80 bg-blue-100/40 rounded-full blur-3xl pointer-events-none" />
+      <div className="hidden md:block absolute bottom-10 -right-32 w-80 h-80 bg-purple-100/40 rounded-full blur-3xl pointer-events-none" />
 
       <div className="container mx-auto px-4 max-w-6xl relative z-10">
         <motion.div

@@ -41,8 +41,8 @@ export function PageLoader() {
           transition={{ duration: 0.6, ease: "easeInOut" }}
           className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-slate-950 overflow-hidden"
         >
-          {/* Background glowing blobs */}
-          <div className="absolute inset-0 pointer-events-none">
+          {/* Background glowing blobs (Hidden on mobile for fast load) */}
+          <div className="hidden md:block absolute inset-0 pointer-events-none">
             <div
               className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full opacity-20"
               style={{ background: "radial-gradient(circle, #3b82f6 0%, transparent 70%)", animation: "blob-pulse 3s ease-in-out infinite" }}

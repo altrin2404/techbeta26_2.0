@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { motion, useScroll, useTransform, useSpring } from "framer-motion";
+import { useEffect, useState } from "react";
+import { motion, useScroll, useTransform, useSpring, useMotionValue } from "framer-motion";
 
 export function InteractiveBackground() {
   const [isPointerDevice, setIsPointerDevice] = useState(false);
-  const mousePos = useRef({ x: 0, y: 0 });
-  const [mouseCoord, setMouseCoord] = useState({ x: -1000, y: -1000 });
+  
+  // Use Framer Motion values instead of React state for 60fps animations without re-renders
+  const mouseX = useMotionValue(-1000);
+  const mouseY = useMotionValue(-1000);
+  const smoothMouseX = useSpring(mouseX, { damping: 50, stiffness: 400 });
+  const smoothMouseY = useSpring(mouseY, { damping: 50, stiffness: 400 });
 
   // Scroll parallax transforms (lightweight and GPU accelerated)
   const { scrollYProgress } = useScroll();
@@ -27,28 +31,17 @@ export function InteractiveBackground() {
 
     if (!isFinePointer) return;
 
-    let animationFrameId: number;
-
     const handlePointerMove = (e: MouseEvent) => {
-      mousePos.current = { x: e.clientX, y: e.clientY };
-    };
-
-    const updateMouse = () => {
-      setMouseCoord((prev) => ({
-        x: prev.x + (mousePos.current.x - prev.x) * 0.12,
-        y: prev.y + (mousePos.current.y - prev.y) * 0.12,
-      }));
-      animationFrameId = requestAnimationFrame(updateMouse);
+      mouseX.set(e.clientX);
+      mouseY.set(e.clientY);
     };
 
     window.addEventListener("pointermove", handlePointerMove, { passive: true });
-    animationFrameId = requestAnimationFrame(updateMouse);
 
     return () => {
       window.removeEventListener("pointermove", handlePointerMove);
-      cancelAnimationFrame(animationFrameId);
     };
-  }, []);
+  }, [mouseX, mouseY]);
 
   return (
     <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none" aria-hidden="true">
@@ -63,13 +56,15 @@ export function InteractiveBackground() {
 
       {/* 2. Interactive Cursor Spotlight (Desktop only, 0 cost on mobile) */}
       {isPointerDevice && (
-        <div
-          className="absolute w-[500px] h-[500px] rounded-full blur-3xl opacity-35 transition-opacity duration-500 pointer-events-none transform -translate-x-1/2 -translate-y-1/2"
+        <motion.div
+          className="absolute w-[500px] h-[500px] rounded-full blur-3xl opacity-35 pointer-events-none transform -translate-x-1/2 -translate-y-1/2"
           style={{
-            left: `${mouseCoord.x}px`,
-            top: `${mouseCoord.y}px`,
+            x: smoothMouseX,
+            y: smoothMouseY,
+            left: 0,
+            top: 0,
             background: "radial-gradient(circle, rgba(59, 130, 246, 0.35) 0%, rgba(147, 51, 234, 0.15) 45%, transparent 70%)",
-            willChange: "transform, left, top",
+            willChange: "transform",
           }}
         />
       )}
@@ -78,19 +73,19 @@ export function InteractiveBackground() {
       {/* Top Right Orb */}
       <motion.div
         style={{ y: yOrb1 }}
-        className="absolute -top-20 -right-20 w-72 h-72 sm:w-[480px] sm:h-[480px] rounded-full bg-gradient-to-br from-blue-400/20 via-indigo-300/15 to-transparent blur-3xl"
+        className="hidden md:block absolute -top-20 -right-20 w-72 h-72 sm:w-[480px] sm:h-[480px] rounded-full bg-gradient-to-br from-blue-400/20 via-indigo-300/15 to-transparent blur-3xl"
       />
 
       {/* Mid Left Orb */}
       <motion.div
         style={{ y: yOrb2 }}
-        className="absolute top-[35%] -left-24 w-64 h-64 sm:w-[420px] sm:h-[420px] rounded-full bg-gradient-to-tr from-cyan-400/15 via-teal-300/15 to-transparent blur-3xl"
+        className="hidden md:block absolute top-[35%] -left-24 w-64 h-64 sm:w-[420px] sm:h-[420px] rounded-full bg-gradient-to-tr from-cyan-400/15 via-teal-300/15 to-transparent blur-3xl"
       />
 
       {/* Lower Right Orb */}
       <motion.div
         style={{ y: yOrb3 }}
-        className="absolute top-[65%] -right-24 w-72 h-72 sm:w-[450px] sm:h-[450px] rounded-full bg-gradient-to-tl from-purple-400/15 via-blue-400/10 to-transparent blur-3xl"
+        className="hidden md:block absolute top-[65%] -right-24 w-72 h-72 sm:w-[450px] sm:h-[450px] rounded-full bg-gradient-to-tl from-purple-400/15 via-blue-400/10 to-transparent blur-3xl"
       />
 
       {/* 4. Geometric Floating Tech Shapes (Hidden or lightweight on mobile) */}
