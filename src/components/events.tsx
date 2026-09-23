@@ -27,7 +27,7 @@ const technicalEvents = [
     description: "Detect hidden contradictions, debug flawed logic, and architect robust technical solutions.",
     icon: Cpu,
     color: "from-emerald-500 to-teal-600",
-    format: "Individual / Team of 2",
+    format: "Team of 2",
     time: "9:00 AM to 12:00 PM",
   },
   {
@@ -35,7 +35,7 @@ const technicalEvents = [
     description: "Pitch groundbreaking tech solutions and defend their architecture, feasibility, and impact.",
     icon: Lightbulb,
     color: "from-amber-400 to-orange-500",
-    format: "Individual / Team of 2",
+    format: "Team of 2",
     time: "9:00 AM to 12:15 PM",
     info: "Participants can complete their presentation and compete in any other technical event, provided the timings don't clash.",
   }
@@ -47,7 +47,7 @@ const nonTechnicalEvents = [
     description: "Create brand identity, catchy taglines, and deliver an engaging live advertising pitch.",
     icon: Megaphone,
     color: "from-rose-500 to-red-600",
-    format: "Individual / Team of 2",
+    format: "Team of 2",
     time: "1:00 PM to 1:45 PM",
   },
   {
@@ -55,7 +55,7 @@ const nonTechnicalEvents = [
     description: "Bid in a ₹100 auction for mystery items and combine them into an innovative new product.",
     icon: Search,
     color: "from-cyan-500 to-blue-500",
-    format: "Individual / Team of 2",
+    format: "Team of 2",
     time: "1:45 PM to 2:30 PM",
   }
 ];

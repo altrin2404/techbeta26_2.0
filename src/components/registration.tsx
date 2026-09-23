@@ -135,7 +135,6 @@ export function Registration() {
       const clean = value.replace(/\D/g, "");
       if (!clean) return "Mobile number is required";
       if (clean.length < 10) return "Must be 10 digits";
-      if (!/^[6-9]\d{9}$/.test(clean)) return "Enter a valid Indian mobile number starting with 6-9";
       return "";
     }
     if (fieldKey.endsWith("-department")) {
@@ -221,6 +220,14 @@ export function Registration() {
         });
     }
   }, [status, regId, primaryParticipantId, participantIds, members]);
+
+  // Automatically add the second member if a team event is chosen and there is only 1 member
+  useEffect(() => {
+    if (isTeamCompetitionChosen && members.length === 1) {
+      const defaultCollege = members[0]?.college || "";
+      setMembers((prev) => [...prev, createEmptyParticipant(defaultCollege)]);
+    }
+  }, [isTeamCompetitionChosen, members.length, members]);
 
   // Member field update
   const updateMember = (index: number, field: keyof Participant, value: string | string[] | boolean) => {
@@ -486,6 +493,28 @@ export function Registration() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
+
+    // Manual validation fallback just in case HTML5 required fails or is bypassed
+    let hasValidationError = false;
+    members.forEach((m) => {
+      if (!m.name.trim() || !m.email.trim() || !m.phone.trim() || !m.department.trim() || !m.college.trim()) {
+        hasValidationError = true;
+      }
+    });
+    
+    if (isTeamCompetitionChosen && members.some((m) => !m.teamName?.trim())) {
+      hasValidationError = true;
+    }
+
+    if (hasValidationError) {
+      setErrorMessage("Please complete all required fields (Name, Email, Phone, Dept, College, and Team Name) for all participants before proceeding.");
+      return;
+    }
+
+    if (isTeamCompetitionChosen && members.length !== 2) {
+      setErrorMessage("You have selected a team event (Logic Trap, Idea Forge, Brand Blitz, or Bid & Build). These are strictly 2-person events. Please register exactly 2 members.");
+      return;
+    }
     setStatus("loading");
     trackEvent("registration_attempt", {
       memberCount: members.length,
@@ -1378,7 +1407,7 @@ export function Registration() {
                                         <div className="flex flex-wrap items-center gap-1.5">
                                           {evt.isTeam && (
                                             <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 shrink-0">
-                                              Team (1-2)
+                                              Team of 2
                                             </span>
                                           )}
                                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 shrink-0 flex items-center gap-1">
@@ -1442,7 +1471,7 @@ export function Registration() {
                                         <div className="flex flex-wrap items-center gap-1.5">
                                           {evt.isTeam && (
                                             <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 shrink-0">
-                                              Team (1-2)
+                                              Team of 2
                                             </span>
                                           )}
                                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 shrink-0 flex items-center gap-1">
@@ -1475,52 +1504,41 @@ export function Registration() {
                           </div>
                         </div>
 
-                        {/* Individual / Team Selection per member */}
-                        {(member.technicalEvents.some((t) => t.toLowerCase().includes("logic trap") || t.toLowerCase().includes("idea forge") || t.toLowerCase().includes("team")) ||
-                          member.nonTechnicalEvents.some((n) => n.toLowerCase().includes("brand blitz") || n.toLowerCase().includes("bid & build") || n.toLowerCase().includes("bid and build") || n.toLowerCase().includes("team"))) && (
+                        {/* Team Name Selection per member */}
+                        {(() => {
+                          const chosenTeamEvents = [
+                            ...member.technicalEvents.filter((t) => t.toLowerCase().includes("logic trap") || t.toLowerCase().includes("idea forge") || t.toLowerCase().includes("team")),
+                            ...member.nonTechnicalEvents.filter((n) => n.toLowerCase().includes("brand blitz") || n.toLowerCase().includes("bid & build") || n.toLowerCase().includes("bid and build") || n.toLowerCase().includes("team"))
+                          ];
+                          if (chosenTeamEvents.length === 0) return null;
+                          return (
                             <div className="mt-6 p-4 sm:p-5 bg-slate-50/80 rounded-2xl border border-slate-200 shadow-sm animate-fadeIn">
-                              <label className="block text-[13px] font-bold text-slate-900 mb-3 uppercase tracking-wide">
-                                You selected a Team Event. Are you participating as:
-                              </label>
-                              <div className="flex gap-6 mb-4">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                  <input type="radio" name={`participationMode-${mIdx}`} checked={!member.isParticipatingAsTeam} onChange={() => { updateMember(mIdx, "isParticipatingAsTeam", false); updateMember(mIdx, "teamName", ""); }} className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500" />
-                                  <span className="text-sm text-slate-700 font-semibold">An Individual</span>
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                                <label htmlFor={`teamName-${mIdx}`} className="block text-xs font-black text-blue-950 uppercase tracking-wider">
+                                  Team Name
                                 </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                  <input type="radio" name={`participationMode-${mIdx}`} checked={!!member.isParticipatingAsTeam} onChange={() => updateMember(mIdx, "isParticipatingAsTeam", true)} className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500" />
-                                  <span className="text-sm text-slate-700 font-semibold">A Team</span>
-                                </label>
+                                <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 w-fit">
+                                  Team Event: {chosenTeamEvents.join(", ")}
+                                </span>
                               </div>
-
-                              {member.isParticipatingAsTeam && (
-                                <div className="pt-4 border-t border-slate-200 animate-fadeIn">
-                                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
-                                    <label htmlFor={`teamName-${mIdx}`} className="block text-xs font-black text-blue-950 uppercase tracking-wider">
-                                      Team Name (Team Competition)
-                                    </label>
-                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 w-fit">
-                                      Team Competition Chosen
-                                    </span>
-                                  </div>
-                                  <input
-                                    id={`teamName-${mIdx}`}
-                                    type="text"
-                                    value={member.teamName || ""}
-                                    onChange={(e) => updateMember(mIdx, "teamName", e.target.value)}
-                                    placeholder="e.g. Code Knights, Byte Busters, Innovators..."
-                                    className="w-full h-11 px-4 rounded-xl border border-blue-300 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-medium shadow-xs"
-                                  />
-                                  <div className="mt-3 flex items-start gap-2 bg-blue-100/80 border border-blue-300 p-2.5 rounded-lg">
-                                    <Info className="h-4 w-4 text-blue-700 shrink-0 mt-0.5" />
-                                    <p className="text-[12px] sm:text-[13px] font-black text-blue-900 leading-tight">
-                                      IMPORTANT: Please enter the EXACT SAME team name for both team members if registering as a team.
-                                    </p>
-                                  </div>
-                                </div>
-                              )}
+                              <input
+                                id={`teamName-${mIdx}`}
+                                type="text"
+                                required
+                                value={member.teamName || ""}
+                                onChange={(e) => updateMember(mIdx, "teamName", e.target.value)}
+                                placeholder="e.g. Code Knights, Byte Busters, Innovators..."
+                                className="w-full h-11 px-4 rounded-xl border border-blue-300 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-medium shadow-xs"
+                              />
+                              <div className="mt-3 flex items-start gap-2 bg-blue-100/80 border border-blue-300 p-2.5 rounded-lg">
+                                <Info className="h-4 w-4 text-blue-700 shrink-0 mt-0.5" />
+                                <p className="text-[12px] sm:text-[13px] font-black text-blue-900 leading-tight">
+                                  IMPORTANT: Please enter the EXACT SAME team name for both team members.
+                                </p>
+                              </div>
                             </div>
-                          )}
+                          );
+                        })()}
                       </div>
                     </div>
                   ))}
