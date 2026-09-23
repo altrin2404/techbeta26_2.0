@@ -1373,16 +1373,18 @@ export function Registration() {
                                   </div>
                                   <div className="flex-grow min-w-0">
                                     <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-1.5 min-w-0">
-                                        <p className="font-semibold text-xs sm:text-sm truncate">{evt.label}</p>
-                                        {evt.isTeam && (
-                                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 shrink-0">
-                                            Team (1-2)
+                                      <div className="flex flex-col 2xl:flex-row 2xl:items-center gap-1.5 min-w-0">
+                                        <p className="font-semibold text-xs sm:text-sm leading-tight">{evt.label}</p>
+                                        <div className="flex flex-wrap items-center gap-1.5">
+                                          {evt.isTeam && (
+                                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 shrink-0">
+                                              Team (1-2)
+                                            </span>
+                                          )}
+                                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 shrink-0 flex items-center gap-1">
+                                            <Clock className="w-2.5 h-2.5" /> {evt.time}
                                           </span>
-                                        )}
-                                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 shrink-0 flex items-center gap-1">
-                                          <Clock className="w-2.5 h-2.5" /> {evt.time}
-                                        </span>
+                                        </div>
                                       </div>
                                       {isSelected && <Check className="h-4 w-4 text-blue-600 shrink-0" />}
                                     </div>
@@ -1435,16 +1437,18 @@ export function Registration() {
                                   </div>
                                   <div className="flex-grow min-w-0">
                                     <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-1.5 min-w-0">
-                                        <p className="font-semibold text-xs sm:text-sm truncate">{evt.label}</p>
-                                        {evt.isTeam && (
-                                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 shrink-0">
-                                            Team (1-2)
+                                      <div className="flex flex-col 2xl:flex-row 2xl:items-center gap-1.5 min-w-0">
+                                        <p className="font-semibold text-xs sm:text-sm leading-tight">{evt.label}</p>
+                                        <div className="flex flex-wrap items-center gap-1.5">
+                                          {evt.isTeam && (
+                                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 shrink-0">
+                                              Team (1-2)
+                                            </span>
+                                          )}
+                                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 shrink-0 flex items-center gap-1">
+                                            <Clock className="w-2.5 h-2.5" /> {evt.time}
                                           </span>
-                                        )}
-                                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 shrink-0 flex items-center gap-1">
-                                          <Clock className="w-2.5 h-2.5" /> {evt.time}
-                                        </span>
+                                        </div>
                                       </div>
                                       {isSelected && <Check className="h-4 w-4 text-purple-600 shrink-0" />}
                                     </div>
