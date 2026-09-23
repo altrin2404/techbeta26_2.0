@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     }
 
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    const phoneRegex = /^[6-9]\d{9}$/;
+    const phoneRegex = /^\d{10}$/;
 
     for (let i = 0; i < memberList.length; i++) {
       const m = memberList[i];

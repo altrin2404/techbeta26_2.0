@@ -31,8 +31,8 @@ export function Venue() {
   return (
     <section id="venue" className="w-full py-16 md:py-24 bg-white relative overflow-hidden scroll-mt-20">
       {/* Subtle background glow */}
-      <div className="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-1/4 w-[450px] h-[450px] bg-blue-100/40 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 right-0 translate-x-1/4 w-[450px] h-[450px] bg-teal-100/30 rounded-full blur-3xl pointer-events-none" />
+      <div className="hidden md:block absolute top-1/2 left-0 -translate-y-1/2 -translate-x-1/4 w-[450px] h-[450px] bg-blue-100/40 rounded-full blur-3xl pointer-events-none" />
+      <div className="hidden md:block absolute bottom-0 right-0 translate-x-1/4 w-[450px] h-[450px] bg-teal-100/30 rounded-full blur-3xl pointer-events-none" />
 
       <div className="container mx-auto px-4 max-w-6xl relative z-10">
         {/* Header */}

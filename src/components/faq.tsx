@@ -45,7 +45,7 @@ export function FAQ() {
   return (
     <section id="faq" className="w-full py-16 md:py-24 bg-white relative overflow-hidden">
       {/* Background glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-50/60 rounded-full blur-3xl pointer-events-none" />
+      <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-50/60 rounded-full blur-3xl pointer-events-none" />
 
       <div className="container mx-auto px-4 max-w-3xl relative z-10">
         <motion.div

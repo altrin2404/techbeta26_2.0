@@ -16,8 +16,8 @@ export function Schedule() {
   return (
     <section id="schedule" className="w-full py-24 bg-gradient-to-b from-white via-slate-50/50 to-white relative overflow-hidden">
       {/* Background ambient lighting */}
-      <div className="absolute top-1/4 -right-40 w-96 h-96 bg-blue-100/30 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 -left-40 w-96 h-96 bg-teal-100/30 rounded-full blur-3xl pointer-events-none" />
+      <div className="hidden md:block absolute top-1/4 -right-40 w-96 h-96 bg-blue-100/30 rounded-full blur-3xl pointer-events-none" />
+      <div className="hidden md:block absolute bottom-1/4 -left-40 w-96 h-96 bg-teal-100/30 rounded-full blur-3xl pointer-events-none" />
 
       <div className="container mx-auto px-4 relative z-10">
         <motion.div

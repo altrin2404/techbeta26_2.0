@@ -43,53 +43,87 @@ export async function GET(request: Request) {
       return NextResponse.json({ found: false, error: 'No registration found for: ' + cleanQuery }, { status: 404 });
     }
 
-    // Parse events
-    let techEvents: string[] = [];
-    let nonTechEvents: string[] = [];
-
-    try {
-      if (registration.technicalEvents) {
-        techEvents = JSON.parse(registration.technicalEvents);
+    // Check if registration belongs to a team or multi-member order
+    let allRegistrations = [registration];
+    if (registration.teamId) {
+      const teamList = await prisma.registration.findMany({
+        where: { teamId: registration.teamId },
+        orderBy: { participantNumber: 'asc' },
+      });
+      if (teamList.length > 0) {
+        allRegistrations = teamList;
       }
-    } catch {
-      techEvents = registration.technicalEvents ? [registration.technicalEvents] : [];
+    } else if (registration.razorpayOrderId) {
+      const orderList = await prisma.registration.findMany({
+        where: { razorpayOrderId: registration.razorpayOrderId },
+        orderBy: { participantNumber: 'asc' },
+      });
+      if (orderList.length > 0) {
+        allRegistrations = orderList;
+      }
     }
 
-    try {
-      if (registration.nonTechnicalEvents) {
-        nonTechEvents = JSON.parse(registration.nonTechnicalEvents);
-      }
-    } catch {
-      nonTechEvents = registration.nonTechnicalEvents ? [registration.nonTechnicalEvents] : [];
-    }
+    const mapRegToPass = (reg: typeof registration) => {
+      let techEvents: string[] = [];
+      let nonTechEvents: string[] = [];
 
-    const displayId =
-      registration.participantId ||
-      (registration.participantNumber ? `TB${String(registration.participantNumber).padStart(3, '0')}` : 'TB001');
+      try {
+        if (reg.technicalEvents) {
+          techEvents = JSON.parse(reg.technicalEvents);
+        }
+      } catch {
+        techEvents = reg.technicalEvents ? [reg.technicalEvents] : [];
+      }
+
+      try {
+        if (reg.nonTechnicalEvents) {
+          nonTechEvents = JSON.parse(reg.nonTechnicalEvents);
+        }
+      } catch {
+        nonTechEvents = reg.nonTechnicalEvents ? [reg.nonTechnicalEvents] : [];
+      }
+
+      const displayId =
+        reg.participantId ||
+        (reg.participantNumber ? `TB${String(reg.participantNumber).padStart(3, '0')}` : 'TB001');
+
+      return {
+        id: reg.id,
+        participantNumber: reg.participantNumber,
+        participantId: displayId,
+        teamId: reg.teamId,
+        teamName: reg.teamName,
+        name: reg.name,
+        email: reg.email,
+        phone: reg.phone,
+        college: reg.college,
+        department: reg.department,
+        year: reg.year,
+        technicalEvents: techEvents,
+        nonTechnicalEvents: nonTechEvents,
+        paymentUtr: reg.paymentUtr,
+        amount: reg.amount || 200,
+        isVerified: reg.isVerified,
+        isEntered: reg.isEntered,
+        enteredAt: reg.enteredAt,
+        createdAt: reg.createdAt,
+      };
+    };
+
+    const mappedMembers = allRegistrations.map(mapRegToPass);
+    const primaryMatched =
+      mappedMembers.find(
+        (m) =>
+          m.participantId.toLowerCase() === cleanQuery.toLowerCase() ||
+          m.phone === cleanQuery ||
+          m.id === cleanQuery ||
+          m.email.toLowerCase() === cleanQuery.toLowerCase()
+      ) || mappedMembers[0];
 
     return NextResponse.json({
       found: true,
-      participant: {
-        id: registration.id,
-        participantNumber: registration.participantNumber,
-        participantId: displayId,
-        teamId: registration.teamId,
-        teamName: registration.teamName,
-        name: registration.name,
-        email: registration.email,
-        phone: registration.phone,
-        college: registration.college,
-        department: registration.department,
-        year: registration.year,
-        technicalEvents: techEvents,
-        nonTechnicalEvents: nonTechEvents,
-        paymentUtr: registration.paymentUtr,
-        amount: registration.amount || 200,
-        isVerified: registration.isVerified,
-        isEntered: registration.isEntered,
-        enteredAt: registration.enteredAt,
-        createdAt: registration.createdAt,
-      },
+      participant: primaryMatched,
+      members: mappedMembers,
     });
   } catch (error) {
     console.error('Error fetching pass data:', error);

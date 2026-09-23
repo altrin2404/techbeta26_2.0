@@ -104,7 +104,7 @@ export function Registration() {
   const [participantIds, setParticipantIds] = useState<Record<number, string>>({});
   const [primaryParticipantId, setPrimaryParticipantId] = useState<string>("");
   const [isDownloading, setIsDownloading] = useState(false);
-  const [qrDataUrl, setQrDataUrl] = useState<string>("");
+  const [qrDataUrls, setQrDataUrls] = useState<Record<number, string>>({});
   const ticketRef = useRef<HTMLDivElement>(null);
 
   const UPI_ID = "techbeta2k26@sbi";
@@ -172,7 +172,7 @@ export function Registration() {
     setRegId("");
     setParticipantIds({});
     setPrimaryParticipantId("");
-    setQrDataUrl("");
+    setQrDataUrls({});
   };
 
   useEffect(() => {
@@ -188,27 +188,36 @@ export function Registration() {
   }, [status]);
 
   useEffect(() => {
-    if (status === "success" && members[0]) {
-      const pId = primaryParticipantId || participantIds[0] || "TB001";
-      const qrData = `${pId}|${regId}|${members[0].name}|${members[0].college}`;
+    if (status === "success" && members.length > 0) {
       import("qrcode")
-        .then((QRCode) => {
-          QRCode.toDataURL(qrData, {
-            width: 300,
-            margin: 1,
-            color: { dark: "#0f172a", light: "#ffffff" },
-          })
-            .then((url) => setQrDataUrl(url))
-            .catch(() => {
-              setQrDataUrl(
-                `https://api.qrserver.com/v1/create-qr-code/?size=140x140&color=0f172a&bgcolor=ffffff&qzone=2&data=${encodeURIComponent(qrData)}`
-              );
-            });
+        .then(async (QRCode) => {
+          const urls: Record<number, string> = {};
+          await Promise.all(
+            members.map(async (m, idx) => {
+              const pId = participantIds[idx] || (idx === 0 ? primaryParticipantId : "") || `TB${String(idx + 1).padStart(3, "0")}`;
+              const qrData = `${pId}|${regId}|${m.name}|${m.college}`;
+              try {
+                const url = await QRCode.toDataURL(qrData, {
+                  width: 300,
+                  margin: 1,
+                  color: { dark: "#0f172a", light: "#ffffff" },
+                });
+                urls[idx] = url;
+              } catch {
+                urls[idx] = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&color=0f172a&bgcolor=ffffff&qzone=2&data=${encodeURIComponent(qrData)}`;
+              }
+            })
+          );
+          setQrDataUrls(urls);
         })
         .catch(() => {
-          setQrDataUrl(
-            `https://api.qrserver.com/v1/create-qr-code/?size=140x140&color=0f172a&bgcolor=ffffff&qzone=2&data=${encodeURIComponent(qrData)}`
-          );
+          const fallbackUrls: Record<number, string> = {};
+          members.forEach((m, idx) => {
+            const pId = participantIds[idx] || (idx === 0 ? primaryParticipantId : "") || `TB${String(idx + 1).padStart(3, "0")}`;
+            const qrData = `${pId}|${regId}|${m.name}|${m.college}`;
+            fallbackUrls[idx] = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&color=0f172a&bgcolor=ffffff&qzone=2&data=${encodeURIComponent(qrData)}`;
+          });
+          setQrDataUrls(fallbackUrls);
         });
     }
   }, [status, regId, primaryParticipantId, participantIds, members]);
@@ -420,16 +429,17 @@ export function Registration() {
         img.onerror = (e: any) => reject(e);
       });
 
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-      });
-
       const pdfWidth = 210; // A4 mm
       const margin = 12;
       const imgWidth = pdfWidth - margin * 2;
       const imgHeight = (img.height * imgWidth) / img.width;
+      const pdfHeight = Math.max(297, imgHeight + margin * 2);
+
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: [pdfWidth, pdfHeight],
+      });
 
       pdf.addImage(dataUrl, "PNG", margin, margin, imgWidth, imgHeight);
       const firstName = members[0]?.name?.split(" ")[0] || "Pass";
@@ -447,9 +457,10 @@ export function Registration() {
         });
         const imgData = canvas.toDataURL("image/png");
         const { jsPDF } = await import("jspdf");
-        const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
         const imgWidth = 186;
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        const pdfHeight = Math.max(297, imgHeight + 24);
+        const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: [210, pdfHeight] });
         pdf.addImage(imgData, "PNG", 12, 12, imgWidth, imgHeight);
         const firstName = members[0]?.name?.split(" ")[0] || "Pass";
         pdf.save(`TechBETA-2026-2.0-EntryPass-${firstName}.pdf`);
@@ -584,10 +595,10 @@ export function Registration() {
   return (
     <section id="register" className="w-full py-16 md:py-24 bg-slate-50 relative overflow-hidden scroll-mt-20 md:scroll-mt-24">
       {/* Decorative background glows */}
-      <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3 transform pointer-events-none">
+      <div className="hidden md:block absolute top-0 right-0 -translate-y-12 translate-x-1/3 transform pointer-events-none">
         <div className="h-[350px] w-[350px] rounded-full bg-gradient-to-br from-blue-400/15 to-purple-400/15 blur-3xl"></div>
       </div>
-      <div className="absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/3 transform pointer-events-none">
+      <div className="hidden md:block absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/3 transform pointer-events-none">
         <div className="h-[350px] w-[350px] rounded-full bg-gradient-to-tr from-cyan-400/15 to-blue-400/15 blur-3xl"></div>
       </div>
 
@@ -744,129 +755,136 @@ export function Registration() {
                       <div className="absolute -top-3.5 left-6 w-7 h-7 rounded-full bg-slate-100 border border-slate-200" />
                       <div className="absolute -top-3.5 right-6 w-7 h-7 rounded-full bg-slate-100 border border-slate-200" />
 
-                      {/* Ticket body: QR + Details */}
+                      {/* Ticket body: QR + Details per participant */}
                       <div className="p-5 sm:p-6 pt-7">
-                        <div className="flex flex-col sm:flex-row gap-5 items-start">
-                          {/* QR Code */}
-                          <div className="flex-shrink-0 flex flex-col items-center mx-auto sm:mx-0">
-                            <div className="p-2.5 bg-white rounded-2xl border-2 border-slate-900 shadow-md">
-                              <NextImage
-                                src={
-                                  qrDataUrl ||
-                                  `https://api.qrserver.com/v1/create-qr-code/?size=140x140&color=0f172a&bgcolor=ffffff&qzone=2&data=${encodeURIComponent(
-                                    regId + "|" + members[0]?.name + "|" + members[0]?.college
-                                  )}`
-                                }
-                                width={120}
-                                height={120}
-                                alt={`Official Entry Ticket QR code for ${members[0]?.name || 'symposium participant'}`}
-                                className="block rounded-sm"
-                                crossOrigin="anonymous"
-                                unoptimized={!!qrDataUrl}
-                              />
-                            </div>
-                            <div className="flex items-center gap-1.5 mt-2.5">
-                              <QrCode className="h-3.5 w-3.5 text-slate-700" />
-                              <span className="text-[10px] text-slate-800 uppercase tracking-wider font-extrabold">Scan at Gate</span>
-                            </div>
+                        {teamName && (
+                          <div className="mb-5 px-3.5 py-2.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-950 text-xs font-bold flex items-center justify-between">
+                            <span className="uppercase tracking-wider text-[10px] text-blue-700">Team Name:</span>
+                            <span className="font-extrabold text-sm text-blue-900">{teamName}</span>
                           </div>
+                        )}
 
-                          {/* Participant info */}
-                          <div className="flex-grow min-w-0 w-full space-y-4">
-                            {teamName && (
-                              <div className="px-3.5 py-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-950 text-xs font-bold flex items-center justify-between">
-                                <span className="uppercase tracking-wider text-[10px] text-blue-700">Team Name:</span>
-                                <span className="font-extrabold text-sm text-blue-900">{teamName}</span>
-                              </div>
-                            )}
-                            {members.map((m, idx) => {
-                              const pId = participantIds[idx] || (idx === 0 ? primaryParticipantId : "") || `TB${String(idx + 1).padStart(3, '0')}`;
-                              return (
-                                <div
-                                  key={idx}
-                                  className={idx > 0 ? "pt-4 border-t-2 border-dashed border-slate-200" : ""}
-                                >
-                                  <div className="flex items-center justify-between gap-2 mb-2">
-                                    {members.length > 1 ? (
-                                      <div className="inline-block px-2 py-0.5 rounded-md bg-slate-800 text-white text-[10px] font-bold uppercase tracking-wider">
-                                        Participant {idx + 1}
-                                      </div>
-                                    ) : (
-                                      <div className="inline-block px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-bold uppercase tracking-wider">
-                                        Participant Pass
-                                      </div>
-                                    )}
-                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-blue-600 text-white font-mono font-black text-xs shadow-2xs">
-                                      <span className="text-[10px] uppercase font-sans font-bold text-blue-100">ID:</span>
-                                      <span>{pId}</span>
+                        <div className="space-y-6">
+                          {members.map((m, idx) => {
+                            const pId = participantIds[idx] || (idx === 0 ? primaryParticipantId : "") || `TB${String(idx + 1).padStart(3, '0')}`;
+                            const memberQr =
+                              qrDataUrls[idx] ||
+                              `https://api.qrserver.com/v1/create-qr-code/?size=140x140&color=0f172a&bgcolor=ffffff&qzone=2&data=${encodeURIComponent(
+                                `${pId}|${regId}|${m.name}|${m.college}`
+                              )}`;
+
+                            return (
+                              <div
+                                key={idx}
+                                className={idx > 0 ? "pt-6 border-t-2 border-dashed border-slate-200" : ""}
+                              >
+                                <div className="flex items-center justify-between gap-2 mb-3">
+                                  {members.length > 1 ? (
+                                    <div className="inline-block px-2.5 py-0.5 rounded-md bg-slate-800 text-white text-[10px] font-bold uppercase tracking-wider">
+                                      Participant {idx + 1}
                                     </div>
-                                  </div>
-
-                                  {/* Name */}
-                                  <div className="mb-2">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block">
-                                      Name
-                                    </span>
-                                    <p className="text-lg sm:text-xl font-black text-slate-950 leading-tight">
-                                      {m.name}
-                                    </p>
-                                  </div>
-
-                                  {/* College Name */}
-                                  <div className="mb-2.5">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block">
-                                      College Name
-                                    </span>
-                                    <p className="text-xs sm:text-sm font-bold text-slate-800 leading-snug">
-                                      {m.college || "St. Xavier's Catholic College of Engineering, Nagercoil"}
-                                    </p>
-                                  </div>
-
-                                  {/* Technical Events */}
-                                  <div className="mb-2.5">
-                                    <span className="text-[11px] font-extrabold uppercase tracking-wide text-blue-950 block mb-1">
-                                      Technical Events:
-                                    </span>
-                                    {m.technicalEvents.length > 0 ? (
-                                      <div className="flex flex-wrap gap-1.5">
-                                        {m.technicalEvents.map((ev) => (
-                                          <span
-                                            key={ev}
-                                            className="px-2.5 py-1 bg-blue-100 text-blue-950 text-xs font-bold rounded-lg border border-blue-300 shadow-xs"
-                                          >
-                                            {ev}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <p className="text-xs font-medium text-slate-500 italic">None selected</p>
-                                    )}
-                                  </div>
-
-                                  {/* Non-Technical Events */}
-                                  <div>
-                                    <span className="text-[11px] font-extrabold uppercase tracking-wide text-purple-950 block mb-1">
-                                      Non-Technical Events:
-                                    </span>
-                                    {m.nonTechnicalEvents.length > 0 ? (
-                                      <div className="flex flex-wrap gap-1.5">
-                                        {m.nonTechnicalEvents.map((ev) => (
-                                          <span
-                                            key={ev}
-                                            className="px-2.5 py-1 bg-purple-100 text-purple-950 text-xs font-bold rounded-lg border border-purple-300 shadow-xs"
-                                          >
-                                            {ev}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <p className="text-xs font-medium text-slate-500 italic">None selected</p>
-                                    )}
+                                  ) : (
+                                    <div className="inline-block px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-bold uppercase tracking-wider">
+                                      Participant Pass
+                                    </div>
+                                  )}
+                                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-blue-600 text-white font-mono font-black text-xs shadow-2xs">
+                                    <span className="text-[10px] uppercase font-sans font-bold text-blue-100">ID:</span>
+                                    <span>{pId}</span>
                                   </div>
                                 </div>
-                              );
-                            })}
-                          </div>
+
+                                <div className="flex flex-col sm:flex-row gap-5 items-start">
+                                  {/* Individual QR Code for this member */}
+                                  <div className="flex-shrink-0 flex flex-col items-center mx-auto sm:mx-0">
+                                    <div className="p-2.5 bg-white rounded-2xl border-2 border-slate-900 shadow-md">
+                                      <NextImage
+                                        src={memberQr}
+                                        width={120}
+                                        height={120}
+                                        alt={`Official Entry Ticket QR code for ${m.name || 'symposium participant'}`}
+                                        className="block rounded-sm"
+                                        crossOrigin="anonymous"
+                                        unoptimized={!!qrDataUrls[idx]}
+                                      />
+                                    </div>
+                                    <div className="flex items-center gap-1.5 mt-2">
+                                      <QrCode className="h-3.5 w-3.5 text-slate-700" />
+                                      <span className="text-[10px] text-slate-800 uppercase tracking-wider font-extrabold">Scan at Gate</span>
+                                    </div>
+                                    <span className="text-[10px] font-mono font-bold text-slate-500 mt-0.5">
+                                      {pId}
+                                    </span>
+                                  </div>
+
+                                  {/* Participant info */}
+                                  <div className="flex-grow min-w-0 w-full space-y-3">
+                                    {/* Name */}
+                                    <div>
+                                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block">
+                                        Name
+                                      </span>
+                                      <p className="text-lg sm:text-xl font-black text-slate-950 leading-tight">
+                                        {m.name}
+                                      </p>
+                                    </div>
+
+                                    {/* College Name */}
+                                    <div>
+                                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block">
+                                        College Name
+                                      </span>
+                                      <p className="text-xs sm:text-sm font-bold text-slate-800 leading-snug">
+                                        {m.college || "St. Xavier's Catholic College of Engineering, Nagercoil"}
+                                      </p>
+                                    </div>
+
+                                    {/* Technical Events */}
+                                    <div>
+                                      <span className="text-[11px] font-extrabold uppercase tracking-wide text-blue-950 block mb-1">
+                                        Technical Events:
+                                      </span>
+                                      {m.technicalEvents.length > 0 ? (
+                                        <div className="flex flex-wrap gap-1.5">
+                                          {m.technicalEvents.map((ev) => (
+                                            <span
+                                              key={ev}
+                                              className="px-2.5 py-1 bg-blue-100 text-blue-950 text-xs font-bold rounded-lg border border-blue-300 shadow-xs"
+                                            >
+                                              {ev}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <p className="text-xs font-medium text-slate-500 italic">None selected</p>
+                                      )}
+                                    </div>
+
+                                    {/* Non-Technical Events */}
+                                    <div>
+                                      <span className="text-[11px] font-extrabold uppercase tracking-wide text-purple-950 block mb-1">
+                                        Non-Technical Events:
+                                      </span>
+                                      {m.nonTechnicalEvents.length > 0 ? (
+                                        <div className="flex flex-wrap gap-1.5">
+                                          {m.nonTechnicalEvents.map((ev) => (
+                                            <span
+                                              key={ev}
+                                              className="px-2.5 py-1 bg-purple-100 text-purple-950 text-xs font-bold rounded-lg border border-purple-300 shadow-xs"
+                                            >
+                                              {ev}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <p className="text-xs font-medium text-slate-500 italic">None selected</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
 
                         {/* Venue & Time highlight strip inside the ticket */}
@@ -986,7 +1004,7 @@ export function Registration() {
                       </div>
 
                       <a
-                        href="https://chat.whatsapp.com/DUMMY_LINK_REPLACE_ME"
+                        href="https://chat.whatsapp.com/HNdWfcLpGipEKTJLhFdv6q"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="mt-4 flex items-center justify-center gap-2.5 w-full h-12 rounded-xl bg-white text-[#075e54] font-bold text-sm hover:bg-green-50 transition-all shadow-md"

@@ -16,8 +16,8 @@ export function TeamAndContact() {
       />
 
       {/* Ambient background glows */}
-      <div className="absolute top-1/3 -left-32 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-10 -right-32 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="hidden md:block absolute top-1/3 -left-32 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="hidden md:block absolute bottom-10 -right-32 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="container mx-auto px-4 relative z-10 max-w-6xl">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-16">

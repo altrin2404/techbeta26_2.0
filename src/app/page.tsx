@@ -5,15 +5,17 @@ import { motion, useScroll, useSpring, AnimatePresence } from "framer-motion";
 import { CalendarDays, MapPin, ArrowRight, ArrowUp } from "lucide-react";
 import Link from "next/link";
 
-import { Schedule } from "@/components/schedule";
-import { Events } from "@/components/events";
-import { Registration } from "@/components/registration";
-import { FAQ } from "@/components/faq";
-import { TeamAndContact } from "@/components/team";
-import { Countdown } from "@/components/countdown";
-import { CollegeBanner } from "@/components/college-banner";
-import { Venue } from "@/components/venue";
-import { InteractiveBackground } from "@/components/interactive-background";
+import dynamic from "next/dynamic";
+
+const Schedule = dynamic(() => import("@/components/schedule").then(m => m.Schedule), { ssr: true });
+const Events = dynamic(() => import("@/components/events").then(m => m.Events), { ssr: true });
+const Registration = dynamic(() => import("@/components/registration").then(m => m.Registration), { ssr: false });
+const FAQ = dynamic(() => import("@/components/faq").then(m => m.FAQ), { ssr: true });
+const TeamAndContact = dynamic(() => import("@/components/team").then(m => m.TeamAndContact), { ssr: true });
+const Countdown = dynamic(() => import("@/components/countdown").then(m => m.Countdown), { ssr: true });
+const CollegeBanner = dynamic(() => import("@/components/college-banner").then(m => m.CollegeBanner), { ssr: true });
+const Venue = dynamic(() => import("@/components/venue").then(m => m.Venue), { ssr: true });
+const InteractiveBackground = dynamic(() => import("@/components/interactive-background").then(m => m.InteractiveBackground), { ssr: false });
 
 export default function Home() {
   const { scrollY, scrollYProgress } = useScroll();
@@ -68,10 +70,10 @@ export default function Home() {
       {/* Hero Section */}
       <section className="relative w-full overflow-hidden bg-gradient-to-b from-white via-slate-50 to-blue-50/50 pt-24 pb-16 md:pt-32 md:pb-20">
         {/* Subtle animated decorative blobs */}
-        <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3 transform animate-float pointer-events-none">
+        <div className="hidden md:block absolute top-0 right-0 -translate-y-12 translate-x-1/3 transform animate-float pointer-events-none">
           <div className="h-[420px] w-[420px] rounded-full bg-gradient-to-br from-blue-200/40 via-purple-200/30 to-transparent blur-3xl"></div>
         </div>
-        <div className="absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/3 transform animate-float-reverse pointer-events-none">
+        <div className="hidden md:block absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/3 transform animate-float-reverse pointer-events-none">
           <div className="h-[520px] w-[520px] rounded-full bg-gradient-to-tr from-cyan-200/30 via-teal-200/30 to-transparent blur-3xl"></div>
         </div>
 
@@ -140,7 +142,7 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
           >
-            <div className="flex items-center gap-3 text-slate-800 bg-white px-4 sm:px-5 py-3 rounded-2xl shadow-md border border-slate-200/80 w-full sm:w-auto justify-center text-left">
+            <div className="flex items-center gap-3 text-slate-800 bg-white px-4 sm:px-5 py-3 rounded-2xl shadow-md border border-slate-200/80 w-full sm:w-auto justify-start sm:justify-center text-left">
               <CalendarDays className="h-5 w-5 text-blue-700 shrink-0" />
               <div className="text-left">
                 <span className="font-semibold text-xs sm:text-sm md:text-base text-slate-900 block leading-tight whitespace-nowrap">
@@ -151,7 +153,7 @@ export default function Home() {
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-3 text-slate-800 bg-white px-4 sm:px-5 py-3 rounded-2xl shadow-md border border-slate-200/80 w-full sm:w-auto justify-center text-left">
+            <div className="flex items-center gap-3 text-slate-800 bg-white px-4 sm:px-5 py-3 rounded-2xl shadow-md border border-slate-200/80 w-full sm:w-auto justify-start sm:justify-center text-left">
               <MapPin className="h-5 w-5 text-teal-700 shrink-0" />
               <div className="text-left">
                 <span className="font-semibold text-xs sm:text-sm md:text-base text-slate-900 block leading-tight">Conference Hall</span>

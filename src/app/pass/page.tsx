@@ -48,8 +48,10 @@ function PassContent() {
   const [searchId, setSearchId] = useState(idQuery);
   const [loading, setLoading] = useState(false);
   const [participant, setParticipant] = useState<ParticipantPass | null>(null);
+  const [members, setMembers] = useState<ParticipantPass[]>([]);
   const [error, setError] = useState('');
   const [qrDataUrl, setQrDataUrl] = useState('');
+  const [qrDataUrls, setQrDataUrls] = useState<Record<string, string>>({});
   const [isDownloading, setIsDownloading] = useState(false);
 
   const cardRef = useRef<HTMLDivElement>(null);
@@ -67,21 +69,33 @@ function PassContent() {
       }
 
       setParticipant(data.participant);
+      const memberList: ParticipantPass[] =
+        Array.isArray(data.members) && data.members.length > 0 ? data.members : [data.participant];
+      setMembers(memberList);
 
-      // Generate QR Code
+      // Generate QR Code for all members
       const QRCode = await import('qrcode');
-      const p = data.participant;
-      const qrPayload = `${p.participantId}|${p.teamId || ''}|${p.name}|${p.college}`;
-      const url = await QRCode.toDataURL(qrPayload, {
-        width: 320,
-        margin: 1,
-        color: { dark: '#0f172a', light: '#ffffff' },
-      });
-      setQrDataUrl(url);
+      const urls: Record<string, string> = {};
+      for (const p of memberList) {
+        const qrPayload = `${p.participantId}|${p.teamId || ''}|${p.name}|${p.college}`;
+        try {
+          const url = await QRCode.toDataURL(qrPayload, {
+            width: 320,
+            margin: 1,
+            color: { dark: '#0f172a', light: '#ffffff' },
+          });
+          urls[p.participantId] = url;
+        } catch {
+          urls[p.participantId] = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&color=0f172a&bgcolor=ffffff&qzone=2&data=${encodeURIComponent(qrPayload)}`;
+        }
+      }
+      setQrDataUrls(urls);
+      setQrDataUrl(urls[data.participant.participantId] || Object.values(urls)[0] || '');
 
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to retrieve entry pass');
       setParticipant(null);
+      setMembers([]);
     } finally {
       setLoading(false);
     }
@@ -122,19 +136,20 @@ function PassContent() {
         img.onerror = (e) => reject(e);
       });
 
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-      });
-
       const pdfWidth = 210;
       const margin = 12;
       const imgWidth = pdfWidth - margin * 2;
       const imgHeight = (img.height * imgWidth) / img.width;
+      const pdfHeight = Math.max(297, imgHeight + margin * 2);
+
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: [pdfWidth, pdfHeight],
+      });
 
       pdf.addImage(dataUrl, 'PNG', margin, margin, imgWidth, imgHeight);
-      const safeId = participant?.participantId || 'Pass';
+      const safeId = participant?.participantId || participant?.teamId || 'Pass';
       pdf.save(`TechBETA-2026-EntryPass-${safeId}.pdf`);
     } catch (primaryErr) {
       console.warn('PDF html-to-image failed, falling back to window.print():', primaryErr);
@@ -249,91 +264,188 @@ function PassContent() {
                 </span>
               </div>
 
-              {/* PROMINENT MASTER PARTICIPANT ID DISPLAY */}
-              <div className="my-4 p-4 rounded-2xl bg-blue-50/80 border-2 border-blue-400 text-center space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-widest text-blue-700 block">
-                  Official Master Participant ID
-                </span>
-                <span className="text-3xl sm:text-4xl font-black font-mono tracking-wider text-blue-700 block">
-                  {participant.participantId}
-                </span>
-                <p className="text-[11px] text-slate-600 font-medium">
-                  Quote this ID at the campus reception and competition venues
-                </p>
-              </div>
+              {members.length > 1 ? (
+                <div className="space-y-6 my-4">
+                  {members.map((m, idx) => {
+                    const memberQr = qrDataUrls[m.participantId] || qrDataUrl;
+                    return (
+                      <div
+                        key={m.id || idx}
+                        className={idx > 0 ? "pt-6 border-t-2 border-dashed border-slate-200" : ""}
+                      >
+                        {/* Member Header */}
+                        <div className="flex items-center justify-between gap-2 mb-3">
+                          <div className="inline-block px-2.5 py-0.5 rounded-md bg-slate-800 text-white text-[10px] font-bold uppercase tracking-wider">
+                            Participant {idx + 1}
+                          </div>
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-blue-600 text-white font-mono font-black text-xs shadow-2xs">
+                            <span className="text-[10px] uppercase font-sans font-bold text-blue-100">ID:</span>
+                            <span>{m.participantId}</span>
+                          </div>
+                        </div>
 
-              {/* QR Code and Participant Information */}
-              <div className="flex flex-col sm:flex-row items-center gap-6 py-2">
-                {/* QR Code */}
-                <div className="flex-shrink-0 text-center space-y-1.5">
-                  <div className="p-2.5 bg-white border-2 border-slate-900 rounded-2xl shadow-md inline-block">
-                    {qrDataUrl ? (
-                      <img
-                        src={qrDataUrl}
-                        alt="Entry QR"
-                        className="w-36 h-36 rounded-lg block"
-                      />
-                    ) : (
-                      <div className="w-36 h-36 bg-slate-100 rounded-lg animate-pulse" />
-                    )}
-                  </div>
-                  <span className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider block">
-                    Campus Gate Scan
-                  </span>
-                </div>
+                        {/* QR Code and Participant Information */}
+                        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 py-1">
+                          {/* QR Code */}
+                          <div className="flex-shrink-0 text-center space-y-1.5 mx-auto sm:mx-0">
+                            <div className="p-2.5 bg-white border-2 border-slate-900 rounded-2xl shadow-md inline-block">
+                              {memberQr ? (
+                                <img
+                                  src={memberQr}
+                                  alt={`Entry QR for ${m.name}`}
+                                  className="w-32 h-32 rounded-lg block"
+                                />
+                              ) : (
+                                <div className="w-32 h-32 bg-slate-100 rounded-lg animate-pulse" />
+                              )}
+                            </div>
+                            <span className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider block">
+                              Campus Gate Scan
+                            </span>
+                            <span className="text-[10px] font-mono font-bold text-blue-700 block">
+                              {m.participantId}
+                            </span>
+                          </div>
 
-                {/* Details */}
-                <div className="flex-1 space-y-2.5 text-center sm:text-left min-w-0">
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                      Participant Name
-                    </span>
-                    <h2 className="text-xl sm:text-2xl font-black text-slate-900 truncate">
-                      {participant.name}
-                    </h2>
-                    {participant.teamName && (
-                      <div className="text-xs font-bold text-blue-600 mt-0.5">
-                        Team: {participant.teamName}
+                          {/* Details */}
+                          <div className="flex-1 space-y-2 text-center sm:text-left min-w-0 w-full">
+                            <div>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                                Participant Name
+                              </span>
+                              <h2 className="text-lg sm:text-xl font-black text-slate-900 truncate">
+                                {m.name}
+                              </h2>
+                              {m.teamName && (
+                                <div className="text-xs font-bold text-blue-600 mt-0.5">
+                                  Team: {m.teamName}
+                                </div>
+                              )}
+                            </div>
+
+                            <div>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                                College &amp; Department
+                              </span>
+                              <p className="text-xs sm:text-sm font-bold text-slate-800">
+                                {m.college}
+                              </p>
+                              <p className="text-xs text-slate-500 mt-0.5">
+                                {m.department || 'IT'} {m.year ? `(${m.year})` : ''}
+                              </p>
+                            </div>
+
+                            {/* Registered Events */}
+                            <div className="pt-2">
+                              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">
+                                Registered Competitions &amp; Events:
+                              </span>
+                              <div className="flex flex-wrap gap-1.5 justify-center sm:justify-start">
+                                {[...(m.technicalEvents || []), ...(m.nonTechnicalEvents || [])].map((ev, evIdx) => (
+                                  <span
+                                    key={evIdx}
+                                    className="px-2 py-0.5 rounded-lg bg-slate-100 border border-slate-200 text-xs font-bold text-slate-800"
+                                  >
+                                    {ev}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                      College &amp; Department
+                    );
+                  })}
+                </div>
+              ) : (
+                <>
+                  {/* PROMINENT MASTER PARTICIPANT ID DISPLAY */}
+                  <div className="my-4 p-4 rounded-2xl bg-blue-50/80 border-2 border-blue-400 text-center space-y-1">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-blue-700 block">
+                      Official Master Participant ID
                     </span>
-                    <p className="text-xs sm:text-sm font-bold text-slate-800">
-                      {participant.college}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      {participant.department || 'IT'} {participant.year ? `(${participant.year})` : ''}
+                    <span className="text-3xl sm:text-4xl font-black font-mono tracking-wider text-blue-700 block">
+                      {participant.participantId}
+                    </span>
+                    <p className="text-[11px] text-slate-600 font-medium">
+                      Quote this ID at the campus reception and competition venues
                     </p>
                   </div>
 
-                  {participant.teamId && (
-                    <div className="text-[11px] font-mono text-slate-500">
-                      Team Ref: <strong className="text-slate-800">{participant.teamId}</strong>
+                  {/* QR Code and Participant Information */}
+                  <div className="flex flex-col sm:flex-row items-center gap-6 py-2">
+                    {/* QR Code */}
+                    <div className="flex-shrink-0 text-center space-y-1.5">
+                      <div className="p-2.5 bg-white border-2 border-slate-900 rounded-2xl shadow-md inline-block">
+                        {qrDataUrl ? (
+                          <img
+                            src={qrDataUrl}
+                            alt="Entry QR"
+                            className="w-36 h-36 rounded-lg block"
+                          />
+                        ) : (
+                          <div className="w-36 h-36 bg-slate-100 rounded-lg animate-pulse" />
+                        )}
+                      </div>
+                      <span className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider block">
+                        Campus Gate Scan
+                      </span>
                     </div>
-                  )}
-                </div>
-              </div>
 
-              {/* Registered Events */}
-              <div className="mt-4 pt-4 border-t border-slate-200 space-y-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">
-                  Registered Competitions &amp; Events:
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {[...(participant.technicalEvents || []), ...(participant.nonTechnicalEvents || [])].map((ev, idx) => (
-                    <span
-                      key={idx}
-                      className="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-xs font-bold text-slate-800"
-                    >
-                      {ev}
+                    {/* Details */}
+                    <div className="flex-1 space-y-2.5 text-center sm:text-left min-w-0">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                          Participant Name
+                        </span>
+                        <h2 className="text-xl sm:text-2xl font-black text-slate-900 truncate">
+                          {participant.name}
+                        </h2>
+                        {participant.teamName && (
+                          <div className="text-xs font-bold text-blue-600 mt-0.5">
+                            Team: {participant.teamName}
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                          College &amp; Department
+                        </span>
+                        <p className="text-xs sm:text-sm font-bold text-slate-800">
+                          {participant.college}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {participant.department || 'IT'} {participant.year ? `(${participant.year})` : ''}
+                        </p>
+                      </div>
+
+                      {participant.teamId && (
+                        <div className="text-[11px] font-mono text-slate-500">
+                          Team Ref: <strong className="text-slate-800">{participant.teamId}</strong>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Registered Events */}
+                  <div className="mt-4 pt-4 border-t border-slate-200 space-y-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">
+                      Registered Competitions &amp; Events:
                     </span>
-                  ))}
-                </div>
-              </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[...(participant.technicalEvents || []), ...(participant.nonTechnicalEvents || [])].map((ev, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-xs font-bold text-slate-800"
+                        >
+                          {ev}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* Reporting Details Footer */}
               <div className="mt-5 pt-3 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-600">
@@ -400,7 +512,7 @@ function PassContent() {
                 </p>
               </div>
               <a
-                href="https://chat.whatsapp.com/DUMMY_LINK_REPLACE_ME"
+                href="https://chat.whatsapp.com/HNdWfcLpGipEKTJLhFdv6q"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="shrink-0 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition-all shadow-md active:scale-95"
