@@ -108,7 +108,7 @@ export function Registration() {
   const ticketRef = useRef<HTMLDivElement>(null);
 
   const UPI_ID = "techbeta2k26@sbi";
-  const FEE_PER_PERSON = 1;
+  const FEE_PER_PERSON = 250;
   const totalAmount = members.length * FEE_PER_PERSON;
 
   const [forceShowTeamName, setForceShowTeamName] = useState(false);
@@ -1633,7 +1633,7 @@ export function Registration() {
                   <div className="pt-3 border-t border-slate-200 flex justify-between items-center">
                     <div>
                       <p className="text-xs text-slate-500">Total Payable ({members.length} participant{members.length > 1 ? "s" : ""})</p>
-                      <p className="text-xs text-emerald-600 font-medium">Includes Buffet Lunch & Certificate</p>
+
                     </div>
                     <div className="text-2xl font-black text-slate-900">
                       ₹{totalAmount}
