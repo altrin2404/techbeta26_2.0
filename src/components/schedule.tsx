@@ -4,8 +4,8 @@ import { motion } from "framer-motion";
 import { Clock } from "lucide-react";
 
 const scheduleItems = [
-  { time: "09:00 AM", title: "Inauguration", desc: "Official opening ceremony of TECHBETA 2026 2.0 at Conference Hall, St. Xavier's Catholic College of Engineering, Nagercoil.", emoji: "🎙️" },
-  { time: "10:30 AM", title: "Technical Events Commence", desc: "Commencement of all technical competitions and challenges across designated labs & halls.", emoji: "⚡" },
+  { time: "08:30 AM", title: "Registration", desc: "Registration at Conference Hall, St. Xavier's Catholic College of Engineering, Nagercoil.", emoji: "🎙️" },
+  { time: "09:00 AM", title: "Technical Events Commence", desc: "Commencement of all technical competitions and challenges across designated labs & halls.", emoji: "⚡" },
   { time: "12:15 PM", title: "Lunch Break", desc: "Lunch will be provided at the food court.", emoji: "🍽️" },
   { time: "01:00 PM", title: "Non-Technical Events", desc: "Commencement of exciting non-technical competitions and interactive sessions.", emoji: "🎯" },
   { time: "03:00 PM", title: "Valedictory Events", desc: "Closing ceremony, prize distribution, and awarding the winners at the Conference Hall.", emoji: "🏆" },
