@@ -67,7 +67,16 @@ const technicalEvents: EventItem[] = [
     color: "from-purple-500 to-pink-500",
     format: "Individual",
     time: "11:00 AM to 12:00 PM",
-    instructions: [],
+    rulesHeader: "EVENT RULES & GUIDELINES",
+    instructions: [
+      "Time Limit: 1 Hour.",
+      "Individual participation only.",
+      "Participants must use HTML, CSS, and JavaScript for designing the webpage.",
+      "Use of the internet is not allowed during the competition.",
+      "The design must follow the given theme.",
+      "Late submissions will not be accepted.",
+      "The decision of the judges will be final.",
+    ],
   },
   {
     title: "LOGIC TRAP",
