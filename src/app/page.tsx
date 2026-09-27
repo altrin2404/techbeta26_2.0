@@ -17,64 +17,67 @@ const CollegeBanner = dynamic(() => import("@/components/college-banner").then(m
 const Venue = dynamic(() => import("@/components/venue").then(m => m.Venue), { ssr: true });
 const InteractiveBackground = dynamic(() => import("@/components/interactive-background").then(m => m.InteractiveBackground), { ssr: false });
 
-export default function Home() {
-  const { scrollY, scrollYProgress } = useScroll();
-  const scaleX = useSpring(scrollYProgress, {
-    stiffness: 100,
-    damping: 30,
-    restDelta: 0.001,
-  });
+function ScrollProgressBar() {
+  const { scrollYProgress } = useScroll();
+  return (
+    <motion.div
+      style={{ scaleX: scrollYProgress }}
+      className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-teal-400 to-indigo-600 origin-left z-50 pointer-events-none shadow-md shadow-blue-500/40"
+    />
+  );
+}
 
-  const [showBackToTop, setShowBackToTop] = useState(false);
+function BackToTopButton() {
+  const { scrollY } = useScroll();
+  const [show, setShow] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = scrollY.on("change", (latest) => {
-      setShowBackToTop(latest > 350);
+    return scrollY.on("change", (latest) => {
+      const shouldShow = latest > 350;
+      setShow((prev) => (prev !== shouldShow ? shouldShow : prev));
     });
-    return () => unsubscribe();
   }, [scrollY]);
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0.7, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.7, y: 20 }}
+          whileHover={{ scale: 1.1, y: -2 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          aria-label="Scroll back to top"
+          className="fixed bottom-6 right-6 z-40 p-3.5 rounded-full bg-slate-900/90 backdrop-blur-md text-white shadow-xl shadow-slate-900/30 border border-slate-700/60 hover:bg-blue-600 hover:border-blue-500 transition-colors flex items-center justify-center cursor-pointer group"
+        >
+          <ArrowUp className="h-5 w-5 group-hover:-translate-y-0.5 transition-transform text-cyan-300" />
+        </motion.button>
+      )}
+    </AnimatePresence>
+  );
+}
 
+export default function Home() {
   return (
     <div className="flex flex-col items-center w-full relative">
-      {/* Interactive GPU-accelerated Parallax & Ambient Background */}
+      {/* High-Performance GPU Ambient Background */}
       <InteractiveBackground />
 
       {/* Scroll Progress Indicator */}
-      <motion.div
-        style={{ scaleX }}
-        className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-teal-400 to-indigo-600 origin-left z-50 pointer-events-none shadow-md shadow-blue-500/40"
-      />
+      <ScrollProgressBar />
 
       {/* Floating Back to Top Button */}
-      <AnimatePresence>
-        {showBackToTop && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.7, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.7, y: 20 }}
-            whileHover={{ scale: 1.1, y: -2 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={scrollToTop}
-            aria-label="Scroll back to top"
-            className="fixed bottom-6 right-6 z-40 p-3.5 rounded-full bg-slate-900/90 backdrop-blur-md text-white shadow-xl shadow-slate-900/30 border border-slate-700/60 hover:bg-blue-600 hover:border-blue-500 transition-colors flex items-center justify-center cursor-pointer group"
-          >
-            <ArrowUp className="h-5 w-5 group-hover:-translate-y-0.5 transition-transform text-cyan-300" />
-          </motion.button>
-        )}
-      </AnimatePresence>
+      <BackToTopButton />
 
       {/* Hero Section */}
       <section className="relative w-full overflow-hidden bg-gradient-to-b from-white via-slate-50 to-blue-50/50 pt-24 pb-16 md:pt-32 md:pb-20">
-        {/* Subtle animated decorative blobs */}
-        <div className="hidden md:block absolute top-0 right-0 -translate-y-12 translate-x-1/3 transform animate-float pointer-events-none">
-          <div className="h-[420px] w-[420px] rounded-full bg-gradient-to-br from-blue-200/40 via-purple-200/30 to-transparent blur-3xl"></div>
+        {/* Static decorative ambient blobs (Zero GPU thrashing) */}
+        <div className="hidden md:block absolute top-0 right-0 -translate-y-12 translate-x-1/3 pointer-events-none" style={{ transform: "translateZ(0)" }}>
+          <div className="h-[420px] w-[420px] rounded-full bg-gradient-to-br from-blue-200/30 via-purple-200/20 to-transparent blur-3xl"></div>
         </div>
-        <div className="hidden md:block absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/3 transform animate-float-reverse pointer-events-none">
-          <div className="h-[520px] w-[520px] rounded-full bg-gradient-to-tr from-cyan-200/30 via-teal-200/30 to-transparent blur-3xl"></div>
+        <div className="hidden md:block absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/3 pointer-events-none" style={{ transform: "translateZ(0)" }}>
+          <div className="h-[520px] w-[520px] rounded-full bg-gradient-to-tr from-cyan-200/25 via-teal-200/20 to-transparent blur-3xl"></div>
         </div>
 
         <div className="container relative z-10 mx-auto px-4 text-center">

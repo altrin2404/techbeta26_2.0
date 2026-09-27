@@ -22,11 +22,8 @@ export function Navbar() {
   }, [isMobileMenuOpen]);
 
   useMotionValueEvent(scrollY, "change", (latest) => {
-    if (latest > 50) {
-      setIsScrolled(true);
-    } else {
-      setIsScrolled(false);
-    }
+    const shouldBeScrolled = latest > 50;
+    setIsScrolled((prev) => (prev !== shouldBeScrolled ? shouldBeScrolled : prev));
   });
 
   const navLinks = [

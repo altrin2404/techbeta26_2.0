@@ -108,7 +108,7 @@ export function Registration() {
   const ticketRef = useRef<HTMLDivElement>(null);
 
   const UPI_ID = "techbeta2k26@sbi";
-  const FEE_PER_PERSON = 250;
+  const FEE_PER_PERSON = 1; // Testing: ₹1
   const totalAmount = members.length * FEE_PER_PERSON;
 
   const [forceShowTeamName, setForceShowTeamName] = useState(false);
