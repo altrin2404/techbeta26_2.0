@@ -467,11 +467,6 @@ export function Events() {
                     <FileText className="w-4 h-4 text-blue-600" />
                     <span>{selectedEvent.rulesHeader || "EVENT RULES & GUIDELINES"}</span>
                   </h4>
-                  {selectedEvent.instructions.length > 0 && (
-                    <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
-                      {selectedEvent.instructions.length} Points
-                    </span>
-                  )}
                 </div>
 
                 {/* Instructions List or Empty State */}
