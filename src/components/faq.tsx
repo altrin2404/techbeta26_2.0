@@ -15,7 +15,7 @@ const faqs = [
   },
   {
     q: "Is lunch provided during the event?",
-    a: "Yes! Lunch is included in the ₹200 registration fee for all registered participants. It will be served at the college food court during the scheduled break."
+    a: "Yes! Lunch is included in the ₹250 registration fee for all registered participants. It will be served at the college food court during the scheduled break."
   },
   {
     q: "How do I register for the event?",

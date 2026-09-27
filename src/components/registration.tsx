@@ -108,7 +108,7 @@ export function Registration() {
   const ticketRef = useRef<HTMLDivElement>(null);
 
   const UPI_ID = "techbeta2k26@sbi";
-  const FEE_PER_PERSON = 1; // Testing: ₹1
+  const FEE_PER_PERSON = 250;
   const totalAmount = members.length * FEE_PER_PERSON;
 
   const [forceShowTeamName, setForceShowTeamName] = useState(false);
@@ -645,7 +645,7 @@ export function Registration() {
             Team Details
           </h2>
           <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto">
-            Register your team or solo entry for TECHBETA 2026 2.0. ₹200 per participant (includes lunch, event entry & certificates).
+            Register your team or solo entry for TECHBETA 2026 2.0. ₹250 per participant (includes lunch, event entry & certificates).
           </p>
         </div>
 

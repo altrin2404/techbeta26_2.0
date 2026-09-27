@@ -64,10 +64,10 @@ A National Level Technical Symposium
 A: TECHBETA 2026 2.0 is open to all college students across the country. Both undergraduate and postgraduate students can participate.
 
 **Q: Is there a registration fee?**  
-A: The registration fee is ₹200 per participant, which includes lunch. This is available through online registration only.
+A: The registration fee is ₹250 per participant, which includes lunch. This is available through online registration only.
 
 **Q: Is lunch provided during the event?**  
-A: Yes! Lunch is included in the ₹200 registration fee for all registered participants. It will be served at the college food court during the scheduled break.
+A: Yes! Lunch is included in the ₹250 registration fee for all registered participants. It will be served at the college food court during the scheduled break.
 
 **Q: How do I register for the event?**  
 A: Please register using the official registration link provided on the website. Online registration is the only valid method for participation.
