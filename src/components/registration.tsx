@@ -187,6 +187,10 @@ export function Registration() {
   }, [status]);
 
   useEffect(() => {
+    loadRazorpay();
+  }, []);
+
+  useEffect(() => {
     if (status === "success" && members.length > 0) {
       import("qrcode")
         .then(async (QRCode) => {
@@ -481,9 +485,20 @@ export function Registration() {
   };
 
   const loadRazorpay = () => {
+    if (typeof window !== "undefined" && (window as unknown as { Razorpay?: unknown }).Razorpay) {
+      return Promise.resolve(true);
+    }
     return new Promise((resolve) => {
+      const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+      if (existingScript) {
+        if ((window as unknown as { Razorpay?: unknown }).Razorpay) return resolve(true);
+        existingScript.addEventListener("load", () => resolve(true));
+        existingScript.addEventListener("error", () => resolve(false));
+        return;
+      }
       const script = document.createElement("script");
       script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.async = true;
       script.onload = () => resolve(true);
       script.onerror = () => resolve(false);
       document.body.appendChild(script);
@@ -1033,7 +1048,7 @@ export function Registration() {
                       </div>
 
                       <a
-                        href="https://chat.whatsapp.com/HNdWfcLpGipEKTJLhFdv6q"
+                        href="https://chat.whatsapp.com/HNdWfcLpGipEKTJLhFdv6q?s=cl&p=i&mlu=4&ilr=4"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="mt-4 flex items-center justify-center gap-2.5 w-full h-12 rounded-xl bg-white text-[#075e54] font-bold text-sm hover:bg-green-50 transition-all shadow-md"

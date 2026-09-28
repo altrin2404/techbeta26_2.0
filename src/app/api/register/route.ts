@@ -2,9 +2,25 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import crypto from 'crypto';
 import { formatParticipantId } from '@/lib/idGenerator';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 export async function POST(request: Request) {
   try {
+    // 1. Rate Limiting: max 20 verification attempts per minute per IP
+    const rateLimit = checkRateLimit(request, { limit: 20, windowMs: 60 * 1000, keyPrefix: 'register' });
+    if (!rateLimit.allowed) {
+      const retryAfterSeconds = Math.max(1, Math.ceil((rateLimit.resetTime - Date.now()) / 1000));
+      return NextResponse.json(
+        { error: 'Too many verification attempts. Please wait a minute and try again.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(retryAfterSeconds),
+          },
+        }
+      );
+    }
+
     const body = await request.json();
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = body;
 
@@ -13,7 +29,12 @@ export async function POST(request: Request) {
     }
 
     // Verify signature
-    const keySecret = process.env.RAZORPAY_KEY_SECRET || '';
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    if (!keySecret) {
+      console.error('[API /register] RAZORPAY_KEY_SECRET is missing in environment.');
+      return NextResponse.json({ error: 'Server payment configuration missing.' }, { status: 500 });
+    }
+
     const generatedSignature = crypto
       .createHmac('sha256', keySecret)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
@@ -51,9 +72,37 @@ export async function POST(request: Request) {
       where: { razorpayOrderId: razorpay_order_id }
     });
 
-    // NOTE: We DO NOT send to Google Sheets / Webhook here because 
-    // the requirement states manual verification in dashboard is required before email is sent.
-    
+    // Optional: Sync newly paid registrations to Google Sheets backup
+    const sheetsWebhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL;
+    if (sheetsWebhookUrl && sheetsWebhookUrl.startsWith('https://')) {
+      try {
+        const rowsToSync = updatedRecords.map((reg, idx) => ({
+          timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+          participantId: reg.participantId,
+          teamId: reg.teamId,
+          teamName: reg.teamName,
+          memberNumber: idx + 1,
+          name: reg.name,
+          email: reg.email,
+          phone: reg.phone,
+          department: reg.department,
+          year: reg.year,
+          college: reg.college,
+          technicalEvents: reg.technicalEvents,
+          nonTechnicalEvents: reg.nonTechnicalEvents,
+          paymentUtr: reg.razorpayPaymentId || razorpay_payment_id,
+          amount: reg.amount,
+        }));
+
+        fetch(sheetsWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'register', rows: rowsToSync }),
+        }).catch((err) => console.warn('[Sheets Sync Background Error]:', err));
+      } catch (syncErr) {
+        console.warn('[Sheets Sync Prep Error]:', syncErr);
+      }
+    }
     return NextResponse.json(
       { 
         message: 'Payment verified and registration complete', 

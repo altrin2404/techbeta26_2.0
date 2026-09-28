@@ -27,8 +27,8 @@
  */
 
 // CONFIG - update as needed
-var WHATSAPP_GROUP_LINK = 'https://chat.whatsapp.com/DUMMY_LINK_REPLACE_ME';
-var CONTACT_EMAIL = 'techbeta22k26@gmail.com';
+var WHATSAPP_GROUP_LINK = 'https://chat.whatsapp.com/HNdWfcLpGipEKTJLhFdv6q?s=cl&p=i&mlu=4&ilr=4';
+var CONTACT_EMAIL = 'techbeta2k26@gmail.com';
 var EVENT_DATE = 'October 13, 2026';
 var SYMPOSIUM_NAME = 'TechBETA 2026 2.0';
 var WEBSITE_URL = 'https://techbeta2026.vercel.app'; // Official website URL

@@ -6,6 +6,8 @@ import { CalendarDays, MapPin, ArrowRight, ArrowUp } from "lucide-react";
 import Link from "next/link";
 
 import dynamic from "next/dynamic";
+import { CollegeBanner } from "@/components/college-banner";
+import { InteractiveBackground } from "@/components/interactive-background";
 
 const Schedule = dynamic(() => import("@/components/schedule").then(m => m.Schedule), { ssr: true });
 const Events = dynamic(() => import("@/components/events").then(m => m.Events), { ssr: true });
@@ -13,9 +15,7 @@ const Registration = dynamic(() => import("@/components/registration").then(m =>
 const FAQ = dynamic(() => import("@/components/faq").then(m => m.FAQ), { ssr: true });
 const TeamAndContact = dynamic(() => import("@/components/team").then(m => m.TeamAndContact), { ssr: true });
 const Countdown = dynamic(() => import("@/components/countdown").then(m => m.Countdown), { ssr: true });
-const CollegeBanner = dynamic(() => import("@/components/college-banner").then(m => m.CollegeBanner), { ssr: true });
 const Venue = dynamic(() => import("@/components/venue").then(m => m.Venue), { ssr: true });
-const InteractiveBackground = dynamic(() => import("@/components/interactive-background").then(m => m.InteractiveBackground), { ssr: false });
 
 function ScrollProgressBar() {
   const { scrollYProgress } = useScroll();

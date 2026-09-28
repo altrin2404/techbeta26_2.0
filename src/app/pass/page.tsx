@@ -512,7 +512,7 @@ function PassContent() {
                 </p>
               </div>
               <a
-                href="https://chat.whatsapp.com/HNdWfcLpGipEKTJLhFdv6q"
+                href="https://chat.whatsapp.com/HNdWfcLpGipEKTJLhFdv6q?s=cl&p=i&mlu=4&ilr=4"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="shrink-0 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition-all shadow-md active:scale-95"

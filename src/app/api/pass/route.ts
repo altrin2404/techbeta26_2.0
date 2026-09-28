@@ -1,8 +1,42 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { checkRateLimit } from '@/lib/rateLimit';
+
+function maskEmail(email?: string | null): string {
+  if (!email || !email.includes('@')) return '';
+  const [user, domain] = email.split('@');
+  if (user.length <= 2) {
+    return `${user[0]}*@${domain}`;
+  }
+  const prefix = user.slice(0, 2);
+  const asterisks = '*'.repeat(Math.min(5, Math.max(3, user.length - 2)));
+  return `${prefix}${asterisks}@${domain}`;
+}
+
+function maskPhone(phone?: string | null): string {
+  if (!phone) return '';
+  const clean = phone.replace(/\D/g, '');
+  if (clean.length < 5) return '*****';
+  return clean.slice(0, 5) + '*****';
+}
 
 export async function GET(request: Request) {
   try {
+    // 1. Rate Limiting: 15 requests per minute per IP
+    const rateLimit = checkRateLimit(request, { limit: 15, windowMs: 60 * 1000, keyPrefix: 'pass' });
+    if (!rateLimit.allowed) {
+      const retryAfterSeconds = Math.max(1, Math.ceil((rateLimit.resetTime - Date.now()) / 1000));
+      return NextResponse.json(
+        { error: 'Too many pass lookup requests. Please wait a minute and try again.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(retryAfterSeconds),
+          },
+        }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('id') || searchParams.get('teamId') || searchParams.get('phone') || searchParams.get('email');
 
@@ -11,6 +45,10 @@ export async function GET(request: Request) {
     }
 
     const cleanQuery = query.trim();
+
+    if (cleanQuery.length > 80) {
+      return NextResponse.json({ error: 'Search query is too long.' }, { status: 400 });
+    }
 
     // Check by participantId (e.g. TB001)
     let registration = await prisma.registration.findFirst({
@@ -63,7 +101,7 @@ export async function GET(request: Request) {
       }
     }
 
-    const mapRegToPass = (reg: typeof registration) => {
+    const mapRegToPass = (reg: (typeof allRegistrations)[number]) => {
       let techEvents: string[] = [];
       let nonTechEvents: string[] = [];
 
@@ -94,8 +132,8 @@ export async function GET(request: Request) {
         teamId: reg.teamId,
         teamName: reg.teamName,
         name: reg.name,
-        email: reg.email,
-        phone: reg.phone,
+        email: maskEmail(reg.email),
+        phone: maskPhone(reg.phone),
         college: reg.college,
         department: reg.department,
         year: reg.year,
@@ -110,15 +148,17 @@ export async function GET(request: Request) {
       };
     };
 
+    const primaryReg =
+      allRegistrations.find(
+        (r) =>
+          (r.participantId && r.participantId.toLowerCase() === cleanQuery.toLowerCase()) ||
+          r.phone === cleanQuery ||
+          r.id === cleanQuery ||
+          r.email.toLowerCase() === cleanQuery.toLowerCase()
+      ) || allRegistrations[0];
+
     const mappedMembers = allRegistrations.map(mapRegToPass);
-    const primaryMatched =
-      mappedMembers.find(
-        (m) =>
-          m.participantId.toLowerCase() === cleanQuery.toLowerCase() ||
-          m.phone === cleanQuery ||
-          m.id === cleanQuery ||
-          m.email.toLowerCase() === cleanQuery.toLowerCase()
-      ) || mappedMembers[0];
+    const primaryMatched = mapRegToPass(primaryReg);
 
     return NextResponse.json({
       found: true,

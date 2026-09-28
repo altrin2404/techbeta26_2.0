@@ -2,13 +2,39 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { formatParticipantId } from '@/lib/idGenerator';
 import Razorpay from 'razorpay';
-
+import { checkRateLimit } from '@/lib/rateLimit';
 
 export async function POST(request: Request) {
   try {
+    // 1. Rate Limiting: max 15 order creation attempts per minute per IP
+    const rateLimit = checkRateLimit(request, { limit: 15, windowMs: 60 * 1000, keyPrefix: 'create-order' });
+    if (!rateLimit.allowed) {
+      const retryAfterSeconds = Math.max(1, Math.ceil((rateLimit.resetTime - Date.now()) / 1000));
+      return NextResponse.json(
+        { error: 'Too many order requests. Please wait a minute and try again.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(retryAfterSeconds),
+          },
+        }
+      );
+    }
+
+    const keyId = process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+    if (!keyId || !keySecret) {
+      console.error('[API /create-order] Missing Razorpay credentials in environment.');
+      return NextResponse.json(
+        { error: 'Payment gateway configuration is missing on the server.' },
+        { status: 500 }
+      );
+    }
+
     const razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID || 'dummy_key',
-      key_secret: process.env.RAZORPAY_KEY_SECRET || 'dummy_secret',
+      key_id: keyId,
+      key_secret: keySecret,
     });
 
     const body = await request.json();
@@ -22,6 +48,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'At least one participant is required.' }, { status: 400 });
     }
 
+    if (memberList.length > 4) {
+      return NextResponse.json({ error: 'A maximum of 4 participants is allowed per registration order.' }, { status: 400 });
+    }
+
+    if (teamName && typeof teamName === 'string' && teamName.trim().length > 50) {
+      return NextResponse.json({ error: 'Team name cannot exceed 50 characters.' }, { status: 400 });
+    }
+
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     const phoneRegex = /^\d{10}$/;
 
@@ -32,16 +66,34 @@ export async function POST(request: Request) {
       if (!m.name || typeof m.name !== 'string' || m.name.trim().length < 2) {
         return NextResponse.json({ error: `Please enter a valid full name for ${memberLabel}.` }, { status: 400 });
       }
+      if (m.name.trim().length > 70) {
+        return NextResponse.json({ error: `Full name cannot exceed 70 characters for ${memberLabel}.` }, { status: 400 });
+      }
+
       const cleanEmail = typeof m.email === 'string' ? m.email.trim() : '';
       if (!cleanEmail || !emailRegex.test(cleanEmail)) {
         return NextResponse.json({ error: `Please enter a valid email address for ${memberLabel}.` }, { status: 400 });
       }
+      if (cleanEmail.length > 100) {
+        return NextResponse.json({ error: `Email address cannot exceed 100 characters for ${memberLabel}.` }, { status: 400 });
+      }
+
       const cleanPhone = typeof m.phone === 'string' ? m.phone.trim().replace(/\D/g, '') : '';
       if (!cleanPhone || !phoneRegex.test(cleanPhone)) {
         return NextResponse.json({ error: `Please enter a valid 10-digit mobile number for ${memberLabel}.` }, { status: 400 });
       }
+
       if (!m.college || typeof m.college !== 'string' || !m.college.trim()) {
         return NextResponse.json({ error: `Please enter the college name for ${memberLabel}.` }, { status: 400 });
+      }
+      if (m.college.trim().length > 120) {
+        return NextResponse.json({ error: `College name cannot exceed 120 characters for ${memberLabel}.` }, { status: 400 });
+      }
+      if (m.department && typeof m.department === 'string' && m.department.trim().length > 100) {
+        return NextResponse.json({ error: `Department name cannot exceed 100 characters for ${memberLabel}.` }, { status: 400 });
+      }
+      if (m.teamName && typeof m.teamName === 'string' && m.teamName.trim().length > 50) {
+        return NextResponse.json({ error: `Team name cannot exceed 50 characters for ${memberLabel}.` }, { status: 400 });
       }
       
       const techEvents = Array.isArray(m.technicalEvents) ? m.technicalEvents : (m.event1 ? [m.event1] : []);
