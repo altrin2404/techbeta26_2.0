@@ -36,6 +36,8 @@ import {
   MapPin,
   Clock,
   ShieldCheck,
+  Users,
+  X,
 } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 
@@ -53,15 +55,15 @@ export interface Participant {
 }
 
 const TECHNICAL_EVENTS = [
-  { id: "GENBUILD", label: "GENBUILD", icon: Terminal, desc: "GenAI & AI tool prototyping", isTeam: false, time: "9:00 AM to 11:00 AM" },
-  { id: "UI-VERSE", label: "UI-VERSE", icon: PenTool, desc: "Design & prototype interface", isTeam: false, time: "11:00 AM to 12:00 PM" },
-  { id: "LOGIC TRAP", label: "LOGIC TRAP", icon: Cpu, desc: "Faulty statement & logic solve", isTeam: true, time: "9:00 AM to 12:00 PM" },
-  { id: "IDEA FORGE", label: "IDEA FORGE", icon: Lightbulb, desc: "Innovative tech concept pitch", isTeam: true, time: "9:00 AM to 12:15 PM" },
+  { id: "GENBUILD", label: "GENBUILD", icon: Terminal, desc: "GenAI & AI tool prototyping", format: "Individual", isTeam: false, time: "9:00 AM to 11:00 AM" },
+  { id: "UI-VERSE", label: "UI-VERSE", icon: PenTool, desc: "Design & prototype interface", format: "Individual", isTeam: false, time: "11:00 AM to 12:00 PM" },
+  { id: "LOGIC TRAP", label: "LOGIC TRAP", icon: Cpu, desc: "Faulty statement & logic solve", format: "Team of 2 or Individual", isTeam: true, time: "9:00 AM to 12:00 PM" },
+  { id: "IDEA FORGE", label: "IDEA FORGE (Idea Presentation)", icon: Lightbulb, desc: "Idea Presentation • Innovative tech concept pitch", format: "Team of 2 or Individual", isTeam: true, time: "9:00 AM to 12:15 PM" },
 ];
 
 const NON_TECHNICAL_EVENTS = [
-  { id: "BRAND BLITZ", label: "BRAND BLITZ", icon: Megaphone, desc: "Creative advertising & pitch", isTeam: true, time: "1:00 PM to 1:45 PM" },
-  { id: "BID & BUILD", label: "BID & BUILD", icon: Search, desc: "Auction & product creation pitch", isTeam: true, time: "1:45 PM to 2:30 PM" },
+  { id: "BRAND BLITZ", label: "BRAND BLITZ", icon: Megaphone, desc: "Creative advertising & pitch", format: "Team of 2 or Individual", isTeam: true, time: "1:00 PM to 1:45 PM" },
+  { id: "BID & BUILD", label: "BID & BUILD", icon: Search, desc: "Auction & product creation pitch", format: "Team of 2 or Individual", isTeam: true, time: "1:45 PM to 2:30 PM" },
 ];
 
 const YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
@@ -113,6 +115,15 @@ export function Registration() {
 
   const [forceShowTeamName, setForceShowTeamName] = useState(false);
   const [teamName, setTeamName] = useState("");
+  const [modePrompt, setModePrompt] = useState<{
+    memberIndex: number;
+    eventId: string;
+    eventTitle: string;
+    isTech: boolean;
+  } | null>(null);
+  const [promptStep, setPromptStep] = useState<"choose" | "team_name">("choose");
+  const [promptTeamName, setPromptTeamName] = useState("");
+  const [promptError, setPromptError] = useState("");
 
   const isTeamCompetitionChosen = members.some((m) =>
     m.technicalEvents.some((t) => t.toLowerCase().includes("logic trap") || t.toLowerCase().includes("idea forge") || t.toLowerCase().includes("team")) ||
@@ -172,6 +183,10 @@ export function Registration() {
     setParticipantIds({});
     setPrimaryParticipantId("");
     setQrDataUrls({});
+    setModePrompt(null);
+    setPromptStep("choose");
+    setPromptTeamName("");
+    setPromptError("");
   };
 
   useEffect(() => {
@@ -225,13 +240,6 @@ export function Registration() {
     }
   }, [status, regId, primaryParticipantId, participantIds, members]);
 
-  // Automatically add the second member if a team event is chosen and there is only 1 member
-  useEffect(() => {
-    if (isTeamCompetitionChosen && members.length === 1) {
-      const defaultCollege = members[0]?.college || "";
-      setMembers((prev) => [...prev, createEmptyParticipant(defaultCollege)]);
-    }
-  }, [isTeamCompetitionChosen, members.length, members]);
 
   // Member field update
   const updateMember = (index: number, field: keyof Participant, value: string | string[] | boolean) => {
@@ -302,6 +310,132 @@ export function Registration() {
       updated[memberIndex] = member;
       return updated;
     });
+  };
+
+  // Click handler for Technical Events (prompts for mode on Logic Trap & Idea Forge)
+  const handleTechEventClick = (memberIndex: number, eventId: string) => {
+    const member = members[memberIndex];
+    if (member.technicalEvents.includes(eventId)) {
+      toggleTechEvent(memberIndex, eventId);
+      return;
+    }
+
+    if (member.technicalEvents.length >= 2) {
+      setErrorMessage(`Participant ${memberIndex + 1} can select at most 2 technical events.`);
+      return;
+    }
+
+    if (eventId === "LOGIC TRAP" || eventId === "IDEA FORGE") {
+      setModePrompt({
+        memberIndex,
+        eventId,
+        eventTitle: eventId === "IDEA FORGE" ? "IDEA FORGE (Idea Presentation)" : "LOGIC TRAP",
+        isTech: true,
+      });
+      return;
+    }
+
+    toggleTechEvent(memberIndex, eventId);
+  };
+
+  // Click handler for Non-Technical Events
+  const handleNonTechEventClick = (memberIndex: number, eventId: string) => {
+    const member = members[memberIndex];
+    if (member.nonTechnicalEvents.includes(eventId)) {
+      toggleNonTechEvent(memberIndex, eventId);
+      return;
+    }
+
+    if (member.nonTechnicalEvents.length >= 2) {
+      setErrorMessage(`Participant ${memberIndex + 1} can select at most 2 non-technical events.`);
+      return;
+    }
+
+    if (eventId === "BRAND BLITZ" || eventId === "BID & BUILD") {
+      setModePrompt({
+        memberIndex,
+        eventId,
+        eventTitle: eventId,
+        isTech: false,
+      });
+      return;
+    }
+
+    toggleNonTechEvent(memberIndex, eventId);
+  };
+
+  // Handle choice of Individual (solo participation)
+  const handleSelectIndividual = () => {
+    if (!modePrompt) return;
+    const { memberIndex, eventId, isTech } = modePrompt;
+
+    setMembers((prev) => {
+      const updated = [...prev];
+      const member = { ...updated[memberIndex] };
+      if (isTech) {
+        if (!member.technicalEvents.includes(eventId) && member.technicalEvents.length < 2) {
+          member.technicalEvents = [...member.technicalEvents, eventId];
+        }
+      } else {
+        if (!member.nonTechnicalEvents.includes(eventId) && member.nonTechnicalEvents.length < 2) {
+          member.nonTechnicalEvents = [...member.nonTechnicalEvents, eventId];
+        }
+      }
+      member.isParticipatingAsTeam = false;
+      updated[memberIndex] = member;
+      return updated;
+    });
+
+    setFieldErrors((prevErrors) => {
+      const nextErrors = { ...prevErrors };
+      delete nextErrors[`member-${memberIndex}-events`];
+      return nextErrors;
+    });
+    setErrorMessage("");
+    setModePrompt(null);
+  };
+
+  // Handle Team confirmation (saves Team Name, does NOT force 2nd member)
+  const handleConfirmTeam = () => {
+    if (!modePrompt) return;
+    if (!promptTeamName.trim()) {
+      setPromptError("Please enter your team name to continue as a team.");
+      return;
+    }
+
+    const { memberIndex, eventId, isTech } = modePrompt;
+    const cleanTeamName = promptTeamName.trim();
+
+    setMembers((prev) => {
+      const updated = [...prev];
+      const member = { ...updated[memberIndex] };
+      if (isTech) {
+        if (!member.technicalEvents.includes(eventId) && member.technicalEvents.length < 2) {
+          member.technicalEvents = [...member.technicalEvents, eventId];
+        }
+      } else {
+        if (!member.nonTechnicalEvents.includes(eventId) && member.nonTechnicalEvents.length < 2) {
+          member.nonTechnicalEvents = [...member.nonTechnicalEvents, eventId];
+        }
+      }
+      member.isParticipatingAsTeam = true;
+      member.teamName = cleanTeamName;
+      updated[memberIndex] = member;
+
+      if (!teamName) {
+        setTeamName(cleanTeamName);
+      }
+
+      return updated;
+    });
+
+    setFieldErrors((prevErrors) => {
+      const nextErrors = { ...prevErrors };
+      delete nextErrors[`member-${memberIndex}-events`];
+      return nextErrors;
+    });
+    setErrorMessage("");
+    setModePrompt(null);
   };
 
   // Add a team member
@@ -516,18 +650,18 @@ export function Registration() {
         hasValidationError = true;
       }
     });
-    
-    if (isTeamCompetitionChosen && members.some((m) => !m.teamName?.trim())) {
+
+    if (isTeamCompetitionChosen && members.length > 1 && members.some((m) => !m.teamName?.trim())) {
       hasValidationError = true;
     }
 
     if (hasValidationError) {
-      setErrorMessage("Please complete all required fields (Name, Email, Phone, Dept, College, and Team Name) for all participants before proceeding.");
+      setErrorMessage("Please complete all required fields (Name, Email, Phone, Dept, College, and Team Name for teams) for all participants before proceeding.");
       return;
     }
 
-    if (isTeamCompetitionChosen && members.length !== 2) {
-      setErrorMessage("You have selected a team event (Logic Trap, Idea Forge, Brand Blitz, or Bid & Build). These are strictly 2-person events. Please register exactly 2 members.");
+    if (isTeamCompetitionChosen && members.length > 2) {
+      setErrorMessage("Team events allow a maximum of 2 participants per team. Please register as an individual or a team of 2.");
       return;
     }
     setStatus("loading");
@@ -1399,7 +1533,7 @@ export function Registration() {
                                   type="button"
                                   key={evt.id}
                                   disabled={isDisabled}
-                                  onClick={() => toggleTechEvent(mIdx, evt.id)}
+                                  onClick={() => handleTechEventClick(mIdx, evt.id)}
                                   className={`p-3 rounded-xl border text-left flex items-start gap-3 transition-all ${isSelected
                                     ? "bg-blue-50/80 border-blue-500 text-blue-900 shadow-sm ring-1 ring-blue-500"
                                     : isDisabled
@@ -1420,11 +1554,9 @@ export function Registration() {
                                       <div className="flex flex-col 2xl:flex-row 2xl:items-center gap-1.5 min-w-0">
                                         <p className="font-semibold text-xs sm:text-sm leading-tight">{evt.label}</p>
                                         <div className="flex flex-wrap items-center gap-1.5">
-                                          {evt.isTeam && (
-                                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 shrink-0">
-                                              Team of 2
-                                            </span>
-                                          )}
+                                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${evt.format.includes("Team") ? "bg-blue-100 text-blue-800" : "bg-slate-100 text-slate-700"}`}>
+                                            {evt.format}
+                                          </span>
                                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 shrink-0 flex items-center gap-1">
                                             <Clock className="w-2.5 h-2.5" /> {evt.time}
                                           </span>
@@ -1463,7 +1595,7 @@ export function Registration() {
                                   type="button"
                                   key={evt.id}
                                   disabled={isDisabled}
-                                  onClick={() => toggleNonTechEvent(mIdx, evt.id)}
+                                  onClick={() => handleNonTechEventClick(mIdx, evt.id)}
                                   className={`p-3 rounded-xl border text-left flex items-start gap-3 transition-all ${isSelected
                                     ? "bg-purple-50/80 border-purple-500 text-purple-900 shadow-sm ring-1 ring-purple-500"
                                     : isDisabled
@@ -1484,11 +1616,9 @@ export function Registration() {
                                       <div className="flex flex-col 2xl:flex-row 2xl:items-center gap-1.5 min-w-0">
                                         <p className="font-semibold text-xs sm:text-sm leading-tight">{evt.label}</p>
                                         <div className="flex flex-wrap items-center gap-1.5">
-                                          {evt.isTeam && (
-                                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 shrink-0">
-                                              Team of 2
-                                            </span>
-                                          )}
+                                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 shrink-0">
+                                            {evt.format}
+                                          </span>
                                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 shrink-0 flex items-center gap-1">
                                             <Clock className="w-2.5 h-2.5" /> {evt.time}
                                           </span>
@@ -1528,29 +1658,69 @@ export function Registration() {
                           if (chosenTeamEvents.length === 0) return null;
                           return (
                             <div className="mt-6 p-4 sm:p-5 bg-slate-50/80 rounded-2xl border border-slate-200 shadow-sm animate-fadeIn">
-                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                                <label htmlFor={`teamName-${mIdx}`} className="block text-xs font-black text-blue-950 uppercase tracking-wider">
-                                  Team Name
-                                </label>
-                                <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 w-fit">
-                                  Team Event: {chosenTeamEvents.join(", ")}
-                                </span>
-                              </div>
-                              <input
-                                id={`teamName-${mIdx}`}
-                                type="text"
-                                required
-                                value={member.teamName || ""}
-                                onChange={(e) => updateMember(mIdx, "teamName", e.target.value)}
-                                placeholder="e.g. Code Knights, Byte Busters, Innovators..."
-                                className="w-full h-11 px-4 rounded-xl border border-blue-300 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-medium shadow-xs"
-                              />
-                              <div className="mt-3 flex items-start gap-2 bg-blue-100/80 border border-blue-300 p-2.5 rounded-lg">
-                                <Info className="h-4 w-4 text-blue-700 shrink-0 mt-0.5" />
-                                <p className="text-[12px] sm:text-[13px] font-black text-blue-900 leading-tight">
-                                  IMPORTANT: Please enter the EXACT SAME team name for both team members.
-                                </p>
-                              </div>
+                              {member.isParticipatingAsTeam ? (
+                                <div>
+                                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                                    <label htmlFor={`teamName-${mIdx}`} className="block text-xs font-black text-blue-950 uppercase tracking-wider">
+                                      Team Name <span className="text-red-500">*</span>
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                      <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 w-fit">
+                                        Team Event: {chosenTeamEvents.join(", ")}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => updateMember(mIdx, "isParticipatingAsTeam", false)}
+                                        className="text-[11px] font-bold text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                                      >
+                                        Switch to Individual
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <input
+                                    id={`teamName-${mIdx}`}
+                                    type="text"
+                                    required
+                                    value={member.teamName || ""}
+                                    onChange={(e) => updateMember(mIdx, "teamName", e.target.value)}
+                                    placeholder="e.g. Code Knights, Byte Busters, Innovators..."
+                                    className="w-full h-11 px-4 rounded-xl border border-blue-300 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-medium shadow-xs"
+                                  />
+                                  <div className="mt-3 flex items-start gap-2 bg-blue-100/80 border border-blue-300 p-2.5 rounded-lg">
+                                    <Info className="h-4 w-4 text-blue-700 shrink-0 mt-0.5" />
+                                    <p className="text-[12px] sm:text-[13px] font-black text-blue-900 leading-tight">
+                                      IMPORTANT: If your teammate is registering separately, please make sure they enter this EXACT SAME team name so your team is matched together.
+                                    </p>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                  <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                                    <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />
+                                    <span>
+                                      Participating as <strong>Individual (Solo)</strong> for: {chosenTeamEvents.join(", ")}
+                                    </span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setPromptStep("team_name");
+                                      setPromptTeamName(member.teamName || "");
+                                      setPromptError("");
+                                      setModePrompt({
+                                        memberIndex: mIdx,
+                                        eventId: chosenTeamEvents[0],
+                                        eventTitle: chosenTeamEvents[0],
+                                        isTech: true,
+                                      });
+                                    }}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs font-bold transition-colors cursor-pointer w-fit"
+                                  >
+                                    <Users className="w-3.5 h-3.5" />
+                                    <span>Switch to Team Mode</span>
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           );
                         })()}
@@ -1734,6 +1904,190 @@ export function Registration() {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Participation Mode Selection Prompt Modal */}
+      <AnimatePresence>
+        {modePrompt && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm"
+            onClick={() => setModePrompt(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden"
+            >
+              {/* Modal Header */}
+              <div className="relative p-6 bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 text-white overflow-hidden">
+                <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/20 rounded-full blur-2xl pointer-events-none" />
+
+                <div className="flex items-start justify-between gap-3 relative z-10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-blue-600/30 border border-blue-400/30 text-cyan-300">
+                      <Users className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-mono uppercase tracking-widest text-cyan-300 font-bold">
+                        Participation Choice
+                      </span>
+                      <h3
+                        className="text-lg sm:text-xl font-bold text-white tracking-tight"
+                        style={{ fontFamily: "var(--font-orbitron)" }}
+                      >
+                        {modePrompt.eventTitle}
+                      </h3>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setModePrompt(null)}
+                    className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                    aria-label="Close"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <p className="text-xs text-slate-300 mt-3 relative z-10 leading-relaxed">
+                  {promptStep === "choose"
+                    ? "Choose whether you are participating individually or as a team:"
+                    : "Enter your team name below:"}
+                </p>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-5 sm:p-6 bg-slate-50/50">
+                {promptStep === "choose" ? (
+                  <div className="space-y-3">
+                    {/* Option 1: Individual */}
+                    <button
+                      type="button"
+                      onClick={handleSelectIndividual}
+                      className="w-full text-left p-4 sm:p-5 rounded-2xl bg-white border-2 border-slate-200 hover:border-blue-500 hover:bg-blue-50/40 hover:shadow-md transition-all group flex items-center justify-between gap-3 cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <div className="w-11 h-11 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                          <User className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-sm sm:text-base text-slate-900 group-hover:text-blue-900 transition-colors">
+                            Individual
+                          </p>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            Participating solo as an individual participant
+                          </p>
+                        </div>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all shrink-0" />
+                    </button>
+
+                    {/* Option 2: Team */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPromptStep("team_name");
+                        setPromptError("");
+                      }}
+                      className="w-full text-left p-4 sm:p-5 rounded-2xl bg-white border-2 border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/40 hover:shadow-md transition-all group flex items-center justify-between gap-3 cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <div className="w-11 h-11 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                          <Users className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-sm sm:text-base text-slate-900 group-hover:text-indigo-900 transition-colors">
+                            Team
+                          </p>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            Participating as a team with a teammate
+                          </p>
+                        </div>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all shrink-0" />
+                    </button>
+                  </div>
+                ) : (
+                  /* Step 2: Team Name Input */
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Team Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        autoFocus
+                        value={promptTeamName}
+                        onChange={(e) => {
+                          setPromptTeamName(e.target.value);
+                          if (promptError) setPromptError("");
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleConfirmTeam();
+                          }
+                        }}
+                        placeholder="e.g. Code Knights, Byte Busters, Innovators..."
+                        className="w-full h-11 px-3.5 rounded-xl border border-indigo-300 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm font-medium shadow-xs"
+                      />
+                      {promptError && (
+                        <p className="text-xs text-red-600 font-semibold mt-1.5 flex items-center gap-1">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span>{promptError}</span>
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="p-3 bg-blue-50 border border-blue-200/80 rounded-xl text-blue-900 text-xs leading-relaxed flex items-start gap-2">
+                      <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                      <span>
+                        Your teammate can register separately at any time. Simply make sure they enter this exact same team name when they register!
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPromptStep("choose");
+                          setPromptError("");
+                        }}
+                        className="w-1/3 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 font-bold text-xs hover:bg-slate-100 transition-colors cursor-pointer"
+                      >
+                        Back
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleConfirmTeam}
+                        className="w-2/3 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/20 transition-all cursor-pointer"
+                      >
+                        Confirm Team Name
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              {promptStep === "choose" && (
+                <div className="px-5 py-3.5 bg-slate-100/80 border-t border-slate-200/70 flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setModePrompt(null)}
+                    className="px-4 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }

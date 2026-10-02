@@ -36,12 +36,12 @@ A National Level Technical Symposium
 
 #### 3. LOGIC TRAP
 - **Description:** Participants are given a deliberately confusing or faulty problem statement containing hidden errors, missing information, or contradictions. They must identify the faults, correct the requirements, and present a practical technical solution.
-- **Format:** Individual / Team of 2
+- **Format:** Team of 2 or Individual
 - **Duration:** 1 hour for discussion + 30 minutes for judging
 
-#### 4. IDEA FORGE
-- **Description:** Participants present an innovative technical idea or concept. They must clearly communicate the problem, proposed solution, novelty, technical approach, practical applications, and potential impact of their idea.
-- **Format:** Individual / Team of 2
+#### 4. IDEA FORGE (Idea Presentation)
+- **Description:** Idea Presentation: Participants present an innovative technical idea or concept. They must clearly communicate the problem, proposed solution, novelty, technical approach, practical applications, and potential impact of their idea.
+- **Format:** Team of 2 or Individual
 - **Duration:** 2 hours
 
 ### NON-TECHNICAL EVENTS

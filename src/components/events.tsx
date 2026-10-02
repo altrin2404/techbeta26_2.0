@@ -83,12 +83,12 @@ const technicalEvents: EventItem[] = [
     description: "Detect hidden contradictions, debug flawed logic, and architect robust technical solutions.",
     icon: Cpu,
     color: "from-emerald-500 to-teal-600",
-    format: "Team of 2",
+    format: "Team of 2 or Individual",
     time: "9:00 AM to 12:00 PM",
     rulesHeader: "EVENT RULES & GUIDELINES",
     instructions: [
-      "Each team must consist of two participants.",
-      "Each team will receive a faulty problem statement which will be provided on spot.",
+      "Individual participation or teams of 2.",
+      "Each team or participant will receive a faulty problem statement which will be provided on spot.",
       "Participants must identify and justify the faults in the given statement.",
       "The corrected requirements must be clear, logical, and consistent.",
       "Participants must not take assistance from other teams.",
@@ -101,14 +101,15 @@ const technicalEvents: EventItem[] = [
     description: "Present your ideas, explore emerging technologies, and showcase your perspective on any technical topic.",
     icon: Lightbulb,
     color: "from-amber-400 to-orange-500",
-    format: "Team of 2",
+    format: "Team of 2 or Individual",
     time: "9:00 AM to 12:15 PM",
+    categorySubtitle: "Idea Presentation",
     info: "Participants can complete their presentation and compete in any other technical event, provided the timings don't clash.",
     rulesHeader: "IDEA PRESENTATION RULES",
     instructions: [
       "Any technical topic or innovative idea is accepted.",
       "Participants from any technical stream are encouraged to participate.",
-      "Each team must have 2 participants.",
+      "Individual participation or teams of 2.",
       "Each team will get 5 minutes — 4 minutes for presentation and 1 minute for Q&A.",
       "The presentation must contain 8–12 slides.",
       "Submit the Problem Statement and Idea Presentation (PDF/PPT) to: techbeta2k26@gmail.com",
@@ -122,7 +123,7 @@ const nonTechnicalEvents: EventItem[] = [
     description: "Create brand identity, catchy taglines, and deliver an engaging live advertising pitch.",
     icon: Megaphone,
     color: "from-rose-500 to-red-600",
-    format: "Team of 2",
+    format: "Team of 2 or Individual",
     time: "1:00 PM to 1:45 PM",
     rulesHeader: "EVENT RULES & GUIDELINES",
     theme: "Think. Brand. Blitz.",
@@ -142,11 +143,11 @@ const nonTechnicalEvents: EventItem[] = [
     description: "Bid in a ₹100 auction for mystery items and combine them into an innovative new product.",
     icon: Search,
     color: "from-cyan-500 to-blue-500",
-    format: "Team of 2",
+    format: "Team of 2 or Individual",
     time: "1:45 PM to 2:30 PM",
     rulesHeader: "EVENT RULES & GUIDELINES",
     instructions: [
-      "Each team must have two participants.",
+      "Individual participation or teams of 2.",
       "Each team will receive a budget of ₹100. Teams must not spend more than this amount.",
       "About 25 everyday objects will be available in the auction. Each team must buy exactly two objects. Team with one object will not be allowed to present.",
       "Teams must use their two objects together to create one new product idea. Teams cannot exchange their objects with other teams.",
@@ -304,9 +305,16 @@ export function Events() {
                       </button>
                     </div>
 
-                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900 mb-2 relative z-10 group-hover:text-blue-600 transition-colors">
-                      {event.title}
-                    </h3>
+                    <div className="flex items-center flex-wrap gap-2 mb-2 relative z-10">
+                      <h3 className="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                        {event.title}
+                      </h3>
+                      {event.categorySubtitle && (
+                        <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200/80 uppercase tracking-wide">
+                          {event.categorySubtitle}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm sm:text-base text-slate-600 mb-6 leading-relaxed relative z-10">
                       {event.description}
                     </p>
@@ -404,10 +412,15 @@ export function Events() {
                         </span>
                       </div>
                       <h3
-                        className="text-xl sm:text-2xl font-bold tracking-tight text-white"
+                        className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center flex-wrap gap-2"
                         style={{ fontFamily: "var(--font-orbitron)" }}
                       >
-                        {selectedEvent.title}
+                        <span>{selectedEvent.title}</span>
+                        {selectedEvent.categorySubtitle && (
+                          <span className="text-xs font-sans font-semibold px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                            {selectedEvent.categorySubtitle}
+                          </span>
+                        )}
                       </h3>
                     </div>
                   </div>
@@ -443,9 +456,9 @@ export function Events() {
 
                 {/* Theme & Subtitle Banner */}
                 {(selectedEvent.theme || selectedEvent.categorySubtitle) && (
-                  <div className="bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200/80 rounded-xl p-3.5 sm:p-4">
+                  <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-3.5 sm:p-4">
                     {selectedEvent.theme && (
-                      <p className="text-xs sm:text-sm font-bold text-rose-900 tracking-wide flex items-center gap-2">
+                      <p className="text-xs sm:text-sm font-bold text-slate-900 tracking-wide flex items-center gap-2">
                         <span className="text-rose-600 font-extrabold uppercase text-[10px] tracking-wider bg-rose-100 px-2 py-0.5 rounded">
                           Theme
                         </span>
@@ -453,8 +466,11 @@ export function Events() {
                       </p>
                     )}
                     {selectedEvent.categorySubtitle && (
-                      <p className="text-xs font-semibold text-rose-700 mt-1">
-                        {selectedEvent.categorySubtitle}
+                      <p className={`text-xs font-semibold mt-1 flex items-center gap-2 ${selectedEvent.categorySubtitle.includes("Idea") ? "text-amber-800" : "text-rose-700"}`}>
+                        <span className={`font-extrabold uppercase text-[10px] tracking-wider px-2 py-0.5 rounded ${selectedEvent.categorySubtitle.includes("Idea") ? "bg-amber-100 text-amber-800" : "bg-rose-100 text-rose-700"}`}>
+                          Format
+                        </span>
+                        <span>{selectedEvent.categorySubtitle}</span>
                       </p>
                     )}
                   </div>
