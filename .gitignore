@@ -45,3 +45,12 @@ yarn-error.log*
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# Certificates data & dispatch logs (prevent watcher overhead)
+/Certificates/
+/scripts/email_dispatch_log.csv
+
+# Python bytecode & caches
+__pycache__/
+*.pyc
+*.pyo

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Menu, Zap, X, Calendar, Star, HelpCircle, PhoneCall, ChevronRight, MapPin } from "lucide-react";
+import { Menu, Zap, X, Calendar, Star, HelpCircle, PhoneCall, ChevronRight, MapPin, Award } from "lucide-react";
 import { motion, useScroll, useMotionValueEvent, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 
@@ -31,13 +31,14 @@ export function Navbar() {
     { name: "Events", href: "#events", icon: Star },
     { name: "Venue", href: "#venue", icon: MapPin },
     { name: "FAQ", href: "#faq", icon: HelpCircle },
+    { name: "Certificates", href: "#claim-certificates", icon: Award },
     { name: "Contact", href: "#contact", icon: PhoneCall }
   ];
 
   const handleScroll = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    setIsMobileMenuOpen(false);
     if (href.startsWith("#")) {
       e.preventDefault();
-      setIsMobileMenuOpen(false);
 
       if (href === "#register") {
         window.dispatchEvent(new CustomEvent("open-registration"));
@@ -104,10 +105,14 @@ export function Navbar() {
             <Link
               href="#register"
               onClick={(e) => handleScroll(e, "#register")}
-              className="hidden md:flex items-center gap-2 h-10 rounded-full bg-gradient-to-r from-blue-600 to-teal-500 px-6 text-sm font-bold text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              className="hidden md:flex items-center gap-2 h-10 rounded-full bg-gradient-to-r from-blue-600 to-teal-500 px-5 text-sm font-bold text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:scale-105 active:scale-95 transition-all cursor-pointer"
             >
               <Zap className="h-4 w-4 fill-white" />
-              Register Now
+              <span>Register Now</span>
+              <span className="flex h-2 w-2 relative ml-0.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+              </span>
             </Link>
 
             <button

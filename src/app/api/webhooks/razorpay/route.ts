@@ -65,6 +65,7 @@ export async function POST(request: Request) {
               where: { id: reg.id },
               data: {
                 paymentStatus: 'PAID',
+                isVerified: true,
                 razorpayPaymentId: razorpayPaymentId || reg.razorpayPaymentId,
                 participantId: reg.participantId || formatParticipantId(reg.participantNumber || 1),
               },

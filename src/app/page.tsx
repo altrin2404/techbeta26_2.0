@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, useScroll, useSpring, AnimatePresence } from "framer-motion";
-import { CalendarDays, MapPin, ArrowRight, ArrowUp } from "lucide-react";
+import { CalendarDays, MapPin, ArrowRight, ArrowUp, Award } from "lucide-react";
 import Link from "next/link";
 
 import dynamic from "next/dynamic";
@@ -16,6 +16,7 @@ const FAQ = dynamic(() => import("@/components/faq").then(m => m.FAQ), { ssr: tr
 const TeamAndContact = dynamic(() => import("@/components/team").then(m => m.TeamAndContact), { ssr: true });
 const Countdown = dynamic(() => import("@/components/countdown").then(m => m.Countdown), { ssr: true });
 const Venue = dynamic(() => import("@/components/venue").then(m => m.Venue), { ssr: true });
+const ClaimCertificates = dynamic(() => import("@/components/claim-certificates").then(m => m.ClaimCertificates), { ssr: false });
 
 function ScrollProgressBar() {
   const { scrollYProgress } = useScroll();
@@ -85,6 +86,37 @@ export default function Home() {
           <div className="mb-6 rounded-3xl overflow-hidden shadow-2xl">
             <CollegeBanner />
           </div>
+
+          {/* Official Certificates Announcement Pill */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4 }}
+            className="mb-6 inline-flex"
+          >
+            <Link
+              href="#claim-certificates"
+              onClick={(e) => {
+                e.preventDefault();
+                const target = document.getElementById("claim-certificates");
+                if (target) {
+                  const navOffset = 85;
+                  const elementPosition = target.getBoundingClientRect().top;
+                  const offsetPosition = elementPosition + window.pageYOffset - navOffset;
+                  window.scrollTo({ top: offsetPosition, behavior: "smooth" });
+                  window.history.pushState(null, "", "#claim-certificates");
+                  setTimeout(() => {
+                    document.getElementById("claim-email-input")?.focus();
+                  }, 450);
+                }
+              }}
+              className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 rounded-full bg-blue-50/90 hover:bg-blue-100 border border-blue-200/90 hover:border-blue-300 text-blue-900 text-xs sm:text-sm font-semibold tracking-wide shadow-xs hover:shadow-sm transition-all group cursor-pointer"
+            >
+              <Award className="h-4 w-4 text-blue-600 shrink-0 group-hover:scale-105 transition-transform" />
+              <span>Participation Certificates Are Live — Claim Yours Now</span>
+              <ArrowRight className="h-3.5 w-3.5 text-blue-600 group-hover:translate-x-1 transition-transform ml-0.5 shrink-0" />
+            </Link>
+          </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -169,33 +201,47 @@ export default function Home() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.4 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4"
           >
             <Link
-              href="#register"
+              href="#claim-certificates"
               onClick={(e) => {
                 e.preventDefault();
-                window.dispatchEvent(new CustomEvent("open-registration"));
-                const target = document.getElementById("register");
+                const target = document.getElementById("claim-certificates");
                 if (target) {
                   const navOffset = 85;
                   const elementPosition = target.getBoundingClientRect().top;
                   const offsetPosition = elementPosition + window.pageYOffset - navOffset;
                   window.scrollTo({ top: offsetPosition, behavior: "smooth" });
-                  window.history.pushState(null, "", "#register");
+                  window.history.pushState(null, "", "#claim-certificates");
                   setTimeout(() => {
-                    document.getElementById("first-participant-name")?.focus({ preventScroll: true });
+                    document.getElementById("claim-email-input")?.focus();
                   }, 450);
                 }
               }}
-              className="inline-flex h-12 sm:h-14 items-center justify-center rounded-full bg-slate-900 px-6 sm:px-8 text-sm sm:text-base font-semibold text-white shadow-xl shadow-slate-900/20 hover:bg-slate-800 hover:scale-105 active:scale-95 transition-all group cursor-pointer"
+              className="inline-flex h-12 sm:h-14 items-center justify-center rounded-full bg-slate-900 hover:bg-blue-700 px-7 sm:px-9 text-sm sm:text-base font-bold text-white shadow-xl shadow-slate-900/20 hover:scale-105 active:scale-95 transition-all group cursor-pointer"
             >
-              Register Now
+              <Award className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-amber-400" />
+              <span>Claim Your Certificates</span>
+              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+
+            <Link
+              href="#events"
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById("events")?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="inline-flex h-12 sm:h-14 items-center justify-center rounded-full bg-white border border-slate-300 px-6 sm:px-8 text-sm sm:text-base font-semibold text-slate-800 shadow-md hover:bg-slate-50 hover:border-slate-400 hover:scale-105 active:scale-95 transition-all group cursor-pointer"
+            >
+              <span>Explore Events</span>
               <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5 group-hover:translate-x-1 transition-transform" />
             </Link>
           </motion.div>
         </div>
       </section>
 
+      <ClaimCertificates />
       <Countdown />
       <Events />
       <Schedule />

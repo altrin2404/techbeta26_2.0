@@ -16,6 +16,15 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  redirects: async () => {
+    return [
+      {
+        source: "/certificates",
+        destination: "/#claim-certificates",
+        permanent: true,
+      },
+    ];
+  },
   headers: async () => {
     return [
       {

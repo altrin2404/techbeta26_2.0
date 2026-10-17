@@ -1,55 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Clock, Calendar } from "lucide-react";
+import { Calendar, CheckCircle2, Trophy, Award, Sparkles, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 export function Countdown() {
-  const eventDate = new Date("2026-10-13T09:00:00").getTime();
-  
-  const [timeLeft, setTimeLeft] = useState({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-  });
-  const [isCompleted, setIsCompleted] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    const mountTimer = setTimeout(() => setMounted(true), 0);
-    const interval = setInterval(() => {
-      const now = new Date().getTime();
-      const distance = eventDate - now;
-
-      if (distance < 0) {
-        clearInterval(interval);
-        setIsCompleted(true);
-      } else {
-        setTimeLeft({
-          days: Math.floor(distance / (1000 * 60 * 60 * 24)),
-          hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-          minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
-          seconds: Math.floor((distance % (1000 * 60)) / 1000),
-        });
-      }
-    }, 1000);
-
-    return () => {
-      clearTimeout(mountTimer);
-      clearInterval(interval);
-    };
-  }, [eventDate]);
-
-  const timeBlocks = [
-    { label: "DAYS", value: timeLeft.days },
-    { label: "HOURS", value: timeLeft.hours },
-    { label: "MINUTES", value: timeLeft.minutes },
-    { label: "SECONDS", value: timeLeft.seconds },
-  ];
-
-  if (!mounted) return null;
+  const scrollToRegister = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    window.dispatchEvent(new CustomEvent("open-registration"));
+    const target = document.getElementById("register");
+    if (target) {
+      const navOffset = 85;
+      const elementPosition = target.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - navOffset;
+      window.scrollTo({ top: offsetPosition, behavior: "smooth" });
+      window.history.pushState(null, "", "#register");
+      setTimeout(() => {
+        document.getElementById("first-participant-name")?.focus({ preventScroll: true });
+      }, 450);
+    }
+  };
 
   return (
     <section className="w-full py-16 md:py-24 bg-gradient-to-b from-[#f8fafe] via-white to-[#f8fafe] relative overflow-hidden">
@@ -59,56 +29,55 @@ export function Countdown() {
 
       <div className="container mx-auto px-4 max-w-6xl relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          
-          {/* Left Side: Countdown */}
+
+          {/* Left Side: Event Completed Message (Timer Clock Closed) */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, margin: "-70px" }}
             transition={{ duration: 0.55, ease: "easeOut" }}
           >
-            <div className="flex items-center gap-2 text-blue-600 font-bold tracking-wider text-xs sm:text-sm mb-4 uppercase">
-              <Clock className="h-4 w-4 text-blue-600 animate-spin" style={{ animationDuration: "12s" }} />
-              Live Countdown
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold tracking-wider text-xs sm:text-sm mb-4 uppercase">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              Event Successfully Concluded
             </div>
-            
-            {isCompleted ? (
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-800 mb-6 sm:mb-8 leading-tight" style={{ fontFamily: "var(--font-orbitron)" }}>
-                Event Successfully <br/>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">Completed</span>
-              </h2>
-            ) : (
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-800 mb-6 sm:mb-8 leading-tight" style={{ fontFamily: "var(--font-orbitron)" }}>
-                TechBETA 2026 2.0 Commences <br/>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-teal-500">In</span>
-              </h2>
-            )}
 
-            <div className="grid grid-cols-4 gap-2 sm:gap-4 md:gap-6 w-full">
-              {timeBlocks.map((block, idx) => (
-                <motion.div
-                  key={block.label}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: idx * 0.08 }}
-                  whileHover={{ y: -5, scale: 1.04 }}
-                  className="flex flex-col gap-1 sm:gap-2 w-full cursor-default"
-                >
-                  <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg shadow-blue-500/5 border border-slate-200/80 hover:border-blue-400 aspect-square sm:aspect-auto sm:w-20 sm:h-24 md:w-24 md:h-28 flex items-center justify-center p-1 sm:p-2 transition-colors">
-                    <span className="text-xl xs:text-2xl sm:text-3xl md:text-5xl font-black text-blue-600 font-[family-name:var(--font-jetbrains-mono)] tracking-wide sm:tracking-widest">
-                      {isCompleted ? "00" : block.value.toString().padStart(2, '0')}
-                    </span>
-                  </div>
-                  <span className="text-[9px] sm:text-xs font-bold text-slate-700 tracking-wider text-center">{block.label}</span>
-                </motion.div>
-              ))}
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-800 mb-4 sm:mb-6 leading-tight" style={{ fontFamily: "var(--font-orbitron)" }}>
+              TechBETA 2026 2.0 <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-teal-500">Event Completed</span>
+            </h2>
+
+
+
+            {/* Event Highlights & Open Registration Notice */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+              <div className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-xs">
+                <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+                  <Trophy className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-800">6 Grand Events</div>
+                  <div className="text-[11px] text-slate-500">Technical &amp; Non-Technical</div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-xs">
+                <div className="p-2 rounded-lg bg-purple-50 text-purple-600">
+                  <Award className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-800">Certificates &amp; Awards</div>
+                  <div className="text-[11px] text-slate-500">Distributed to Winners</div>
+                </div>
+              </div>
             </div>
+
+
           </motion.div>
 
-          {/* Right Side: Date Card */}
+          {/* Right Side: Date & Active Registration Card */}
           <div className="flex justify-center lg:justify-end">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, x: 30, scale: 0.96 }}
               whileInView={{ opacity: 1, x: 0, scale: 1 }}
               viewport={{ once: true, margin: "-70px" }}
@@ -124,7 +93,7 @@ export function Countdown() {
                   OCTOBER 2026
                 </h3>
               </div>
-              
+
               <div className="p-6 sm:p-8">
                 <div className="text-center mb-6 sm:mb-8 relative">
                   <div className="text-[5.5rem] sm:text-[7rem] md:text-[8rem] leading-none font-black text-slate-800 font-[family-name:var(--font-jetbrains-mono)] tracking-tighter hover:text-blue-600 transition-colors">
@@ -132,30 +101,34 @@ export function Countdown() {
                   </div>
                 </div>
 
-                <div className="bg-slate-50 border border-slate-100 rounded-2xl py-3 px-6 flex items-center justify-center gap-3 mb-8 text-slate-700 font-bold uppercase text-xs sm:text-sm tracking-wide mx-auto shadow-sm">
-                  <Calendar className="h-5 w-5 text-purple-600 shrink-0" />
+                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl py-3 px-6 flex items-center justify-center gap-3 mb-6 text-emerald-800 font-bold uppercase text-xs sm:text-sm tracking-wide mx-auto shadow-sm">
+                  <Calendar className="h-5 w-5 text-emerald-600 shrink-0" />
                   <span className="text-center leading-tight">
-                    {isCompleted ? (
-                      <>EVENT<br/>COMPLETED</>
-                    ) : (
-                      <>EVENT<br/>UPCOMING</>
-                    )}
+                    EVENT<br />COMPLETED
                   </span>
                 </div>
 
-                <div className="text-center text-slate-500 font-semibold mb-8 uppercase tracking-wider text-sm">
+                <div className="text-center text-slate-500 font-semibold mb-6 uppercase tracking-wider text-sm">
                   Tuesday | SXCCE, Nagercoil
                 </div>
 
-                {isCompleted ? (
-                  <button disabled className="w-full h-14 rounded-xl bg-slate-200 text-slate-400 font-bold tracking-wide uppercase transition-all cursor-not-allowed">
-                    Completed
-                  </button>
-                ) : (
-                  <Link href="#register" className="flex items-center justify-center w-full h-14 rounded-xl bg-slate-900 hover:bg-blue-600 text-white font-bold tracking-wider uppercase transition-all shadow-lg shadow-slate-900/20 hover:shadow-blue-500/25 hover:scale-[1.02] active:scale-[0.98]">
-                    Register Now
-                  </Link>
-                )}
+                {/* Claim Certificates Call to Action */}
+                <Link
+                  href="#claim-certificates"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.getElementById("claim-certificates")?.scrollIntoView({ behavior: "smooth" });
+                    setTimeout(() => {
+                      document.getElementById("claim-email-input")?.focus();
+                    }, 400);
+                  }}
+                  className="flex items-center justify-center gap-2 w-full h-14 rounded-xl bg-gradient-to-r from-blue-700 via-indigo-600 to-teal-600 hover:from-blue-600 hover:to-teal-500 text-white font-bold tracking-wider uppercase transition-all shadow-lg shadow-blue-500/25 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                >
+                  <Award className="h-5 w-5" />
+                  <span>Claim Certificates</span>
+                  <ArrowRight className="h-4 w-4 ml-1" />
+                </Link>
+
               </div>
             </motion.div>
           </div>
