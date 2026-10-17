@@ -242,79 +242,13 @@ function ClaimCertificatesContent() {
             {/* Certificates Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {result.certificates.map((cert) => (
-                <div
+                <CertificateCard
                   key={cert.id}
-                  className="group rounded-3xl bg-white border border-slate-200/90 hover:border-teal-400 p-5 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${cert.eventType === "Technical"
-                              ? "bg-blue-50 text-blue-700 border border-blue-200"
-                              : "bg-amber-50 text-amber-700 border border-amber-200"
-                              }`}
-                          >
-                            {cert.eventType}
-                          </span>
-                          <span className="text-xs text-slate-400 font-medium">TechBETA 2026 2.0</span>
-                        </div>
-                        <h4 className="text-lg font-black text-slate-900 mt-1 group-hover:text-blue-700 transition-colors">
-                          {cert.event}
-                        </h4>
-                      </div>
-                    </div>
-
-                    {/* Preview Thumbnail */}
-                    <div
-                      onClick={() => setSelectedPreview(cert)}
-                      className="relative aspect-[1.414/1] rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 group-hover:border-teal-400 transition-all cursor-pointer shadow-inner"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={cert.viewUrl}
-                        alt={`${cert.name} - ${cert.event}`}
-                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
-                        loading="lazy"
-                      />
-                      <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-[2px]">
-                        <span className="px-3 py-1.5 rounded-xl bg-white/95 text-xs font-bold text-slate-900 shadow-lg flex items-center gap-1.5">
-                          <Eye className="w-3.5 h-3.5 text-blue-600" />
-                          <span>Preview Full Screen</span>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Actions Row */}
-                  <div className="pt-4 mt-4 border-t border-slate-100 flex items-center gap-2">
-                    <button
-                      onClick={() => triggerDownload(cert)}
-                      disabled={downloadingId === cert.id}
-                      className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-blue-700 to-teal-600 hover:from-blue-600 hover:to-teal-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-600/20 hover:shadow-blue-600/30 transition-all active:scale-95 cursor-pointer disabled:opacity-60"
-                    >
-                      {downloadingId === cert.id ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin text-white" />
-                          <span>Downloading...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Download className="w-4 h-4 text-white" />
-                          <span>Download Certificate</span>
-                        </>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => setSelectedPreview(cert)}
-                      className="p-3 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 hover:text-slate-900 transition-all cursor-pointer"
-                      title="Enlarge preview"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
+                  cert={cert}
+                  isDownloading={downloadingId === cert.id}
+                  onPreview={(item) => setSelectedPreview(item)}
+                  onDownload={(item) => triggerDownload(item)}
+                />
               ))}
             </div>
           </motion.div>
@@ -358,13 +292,8 @@ function ClaimCertificatesContent() {
                   </div>
                 </div>
 
-                <div className="relative max-h-[75vh] flex items-center justify-center overflow-auto rounded-xl bg-slate-950">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={selectedPreview.viewUrl}
-                    alt={selectedPreview.name}
-                    className="max-h-[72vh] w-auto object-contain rounded-lg shadow-2xl"
-                  />
+                <div className="relative min-h-[280px] max-h-[75vh] flex items-center justify-center overflow-auto rounded-xl bg-slate-950">
+                  <LightboxImage src={selectedPreview.viewUrl} alt={selectedPreview.name} />
                 </div>
               </div>
             </motion.div>
@@ -372,6 +301,132 @@ function ClaimCertificatesContent() {
         </AnimatePresence>
       </div>
     </section>
+  );
+}
+
+function CertificateCard({
+  cert,
+  isDownloading,
+  onPreview,
+  onDownload
+}: {
+  cert: CertificateItem;
+  isDownloading: boolean;
+  onPreview: (cert: CertificateItem) => void;
+  onDownload: (cert: CertificateItem) => void;
+}) {
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  return (
+    <div className="group rounded-3xl bg-white border border-slate-200/90 hover:border-teal-400 p-5 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
+      <div className="space-y-3">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-2">
+              <span
+                className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                  cert.eventType === "Technical"
+                    ? "bg-blue-50 text-blue-700 border border-blue-200"
+                    : "bg-amber-50 text-amber-700 border border-amber-200"
+                }`}
+              >
+                {cert.eventType}
+              </span>
+              <span className="text-xs text-slate-400 font-medium">TechBETA 2026 2.0</span>
+            </div>
+            <h4 className="text-lg font-black text-slate-900 mt-1 group-hover:text-blue-700 transition-colors">
+              {cert.event}
+            </h4>
+          </div>
+        </div>
+
+        {/* Preview Thumbnail Container */}
+        <div
+          onClick={() => onPreview(cert)}
+          className="relative aspect-[1.414/1] rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 group-hover:border-teal-400 transition-all cursor-pointer shadow-inner flex items-center justify-center"
+        >
+          {/* Skeleton Loader while downloading */}
+          {!imageLoaded && (
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-100 via-slate-200/70 to-slate-100 animate-pulse flex flex-col items-center justify-center gap-2 p-4 text-center z-10">
+              <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+              <span className="text-xs font-semibold text-slate-600">Loading certificate preview...</span>
+            </div>
+          )}
+
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={cert.viewUrl}
+            alt={`${cert.name} - ${cert.event}`}
+            onLoad={() => setImageLoaded(true)}
+            className={`w-full h-full object-contain transition-all duration-500 ${
+              imageLoaded ? "opacity-100 scale-100" : "opacity-0 scale-95"
+            } group-hover:scale-105`}
+            fetchPriority="high"
+          />
+
+          {imageLoaded && (
+            <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-[2px]">
+              <span className="px-3 py-1.5 rounded-xl bg-white/95 text-xs font-bold text-slate-900 shadow-lg flex items-center gap-1.5">
+                <Eye className="w-3.5 h-3.5 text-blue-600" />
+                <span>Preview Full Screen</span>
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Actions Row */}
+      <div className="pt-4 mt-4 border-t border-slate-100 flex items-center gap-2">
+        <button
+          onClick={() => onDownload(cert)}
+          disabled={isDownloading}
+          className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-blue-700 to-teal-600 hover:from-blue-600 hover:to-teal-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-600/20 hover:shadow-blue-600/30 transition-all active:scale-95 cursor-pointer disabled:opacity-60"
+        >
+          {isDownloading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
+              <span>Downloading...</span>
+            </>
+          ) : (
+            <>
+              <Download className="w-4 h-4 text-white" />
+              <span>Download Certificate</span>
+            </>
+          )}
+        </button>
+        <button
+          onClick={() => onPreview(cert)}
+          className="p-3 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 hover:text-slate-900 transition-all cursor-pointer"
+          title="Enlarge preview"
+        >
+          <Eye className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function LightboxImage({ src, alt }: { src: string; alt: string }) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <div className="relative flex items-center justify-center w-full min-h-[300px]">
+      {!loaded && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-slate-400">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+          <span className="text-xs font-medium">Opening high-resolution certificate...</span>
+        </div>
+      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        onLoad={() => setLoaded(true)}
+        className={`max-h-[72vh] w-auto object-contain rounded-lg shadow-2xl transition-opacity duration-300 ${
+          loaded ? "opacity-100" : "opacity-0"
+        }`}
+        fetchPriority="high"
+      />
+    </div>
   );
 }
 

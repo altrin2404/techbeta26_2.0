@@ -82,6 +82,9 @@ export async function GET(request: NextRequest) {
       return `${user.slice(0, 2)}***${user.slice(-2)}@${domain}`;
     };
 
+    const SUPABASE_STORAGE_URL =
+      process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ubrtmgkdaosavcpvbzyl.supabase.co';
+
     return NextResponse.json({
       found: true,
       count: matches.length,
@@ -96,7 +99,9 @@ export async function GET(request: NextRequest) {
         college: c.college,
         event: c.event,
         eventType: c.eventType,
-        viewUrl: `/api/certificates/download?id=${c.id}&view=1`,
+        viewUrl: `${SUPABASE_STORAGE_URL}/storage/v1/object/public/certificates/${encodeURIComponent(
+          c.folder
+        )}/${encodeURIComponent(c.filename)}`,
         downloadUrl: `/api/certificates/download?id=${c.id}`,
         fileSize: c.fileSize,
         verified: true
