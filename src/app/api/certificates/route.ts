@@ -19,7 +19,7 @@ const certificates = certificatesData as CertificateRecord[];
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get('q') || searchParams.get('email') || searchParams.get('name') || '';
+    const query = searchParams.get('q') || searchParams.get('email') || '';
     const cleanQuery = query.trim().toLowerCase();
 
     if (!cleanQuery) {
@@ -28,40 +28,32 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         totalCertificates: certificates.length,
         events: uniqueEvents,
-        message: 'Provide a query parameter (q or email) to search for certificates.'
+        message: 'Provide an email parameter to search for certificates.'
       });
     }
 
-    // Match by email or participant name
-    let matches: CertificateRecord[] = [];
-
-    const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const normQuery = normalize(cleanQuery);
-
-    if (cleanQuery.includes('@')) {
-      // Direct email lookup
-      matches = certificates.filter((c) => c.email.toLowerCase().trim() === cleanQuery);
-    } else {
-      // Name lookup:
-      // 1. Exact alphanumeric match priority (handles Anamika S vs Anamika.S, etc.)
-      const exact = certificates.filter((c) => normalize(c.name) === normQuery);
-      if (exact.length > 0) {
-        matches = exact;
-      } else {
-        // 2. Substring match (e.g. typing "Janeha" matches "Janeha J")
-        matches = certificates.filter((c) => {
-          const normName = normalize(c.name);
-          return normName.includes(normQuery) || (normQuery.length >= 3 && normName.startsWith(normQuery));
-        });
-      }
+    if (!cleanQuery.includes('@')) {
+      return NextResponse.json(
+        {
+          found: false,
+          count: 0,
+          error: 'Please enter a valid registered email address.'
+        },
+        { status: 400 }
+      );
     }
+
+    // Match strictly by registered email
+    const matches: CertificateRecord[] = certificates.filter(
+      (c) => c.email.toLowerCase().trim() === cleanQuery
+    );
 
     if (matches.length === 0) {
       return NextResponse.json(
         {
           found: false,
           count: 0,
-          error: `No certificate found matching "${query}". Please check the spelling of your Name or Email ID.`
+          error: `No certificate found registered to "${query}". Please check the spelling of your email address.`
         },
         { status: 404 }
       );

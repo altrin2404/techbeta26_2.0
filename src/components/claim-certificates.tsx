@@ -115,7 +115,7 @@ function ClaimCertificatesContent() {
           </h2>
 
           <p className="text-slate-600 text-sm sm:text-base leading-relaxed max-w-2xl mx-auto">
-            Enter your name or registered email address to download your certificate
+            Enter your registered email address to download your certificate
           </p>
         </div>
 
@@ -128,11 +128,11 @@ function ClaimCertificatesContent() {
               <div className="relative flex-1 w-full flex items-center">
                 <Search className="absolute left-4 w-5 h-5 text-slate-400 pointer-events-none" />
                 <input
-                  type="text"
+                  type="email"
                   id="claim-email-input"
                   value={emailQuery}
                   onChange={(e) => setEmailQuery(e.target.value)}
-                  placeholder="Enter your registered Name or Email ID..."
+                  placeholder="Enter your registered email address..."
                   className="w-full pl-12 pr-10 py-3.5 sm:py-4 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all font-medium"
                   required
                 />
